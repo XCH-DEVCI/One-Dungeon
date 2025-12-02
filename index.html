@@ -291,7 +291,8 @@ const BASE_TORCH_INTENSITY = 1.25;
 let torchTime = 0;
 
 const canvas = document.getElementById("renderCanvas");
-const engine = new BABYLON.Engine(canvas, true);
+const engine = new BABYLON.Engine(canvas, false);
+engine.setHardwareScalingLevel(1.5);
 
 let scene, camera, playerLight;
 
