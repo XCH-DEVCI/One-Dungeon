@@ -119,7 +119,7 @@
 
   "portals": {
     "S": {
-      "url": "https://termcic.github.io/insect_ecology/rest_room.json",
+      "url": "https://xch-devci.github.io/One-Dungeon/maps/restroom.json",
       "spawn": { "i": 2, "j": 5 }
     }
   },
