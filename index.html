@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>KEG v0.7.6</title>
+<title>KEG v0.7.7</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -325,9 +325,6 @@ let portals = {};
 let structuresDefs = {};
 let portalCooldown = 0;
 let mapDefaultSpawn = null;
-const wallMaterialCache = {};
-const floorMaterialCache = {};
-const ceilingMaterialCache = {};
 
 /* ============================================================
    Helpers
@@ -608,45 +605,6 @@ function spawnStructures(scene) {
 function createScene() {
     const scene = new BABYLON.Scene(engine);
 
-    function getFloorMaterial(scene, symbol, url) {
-        if (!url) return null;
-        if (floorMaterialCache[symbol]) return floorMaterialCache[symbol];
-    
-        const m = new BABYLON.StandardMaterial("floorMat_" + symbol, scene);
-        m.diffuseTexture = new BABYLON.Texture(url, scene);
-        m.maxSimultaneousLights = 4;
-        floorMaterialCache[symbol] = m;
-        return m;
-    }
-    
-    function getWallMaterial(scene, symbol, url) {
-        if (!url) return null;
-        if (wallMaterialCache[symbol]) return wallMaterialCache[symbol];
-    
-        const m = new BABYLON.StandardMaterial("wallMat_" + symbol, scene);
-        const tex = new BABYLON.Texture(url, scene);
-        tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-        tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-    
-        m.diffuseTexture = tex;
-        m.specularColor = new BABYLON.Color3(0, 0, 0);
-        m.diffuseTexture.level = 0.9;
-        m.maxSimultaneousLights = 4;
-        wallMaterialCache[symbol] = m;
-        return m;
-    }
-    
-    function getCeilingMaterial(scene, symbol, url) {
-        if (!url) return null;
-        if (ceilingMaterialCache[symbol]) return ceilingMaterialCache[symbol];
-    
-        const m = new BABYLON.StandardMaterial("ceilMat_" + symbol, scene);
-        m.diffuseTexture = new BABYLON.Texture(url, scene);
-        m.maxSimultaneousLights = 4;
-        ceilingMaterialCache[symbol] = m;
-        return m;
-    }
-
     // camera
     camera = new BABYLON.UniversalCamera(
         "playerCamera",
@@ -689,14 +647,18 @@ function createScene() {
         for (let j = 0; j < MAP_SIZE; j++) {
             const pos = gridToWorld(i, j);
 
-             // FLOOR from groundMap symbol and floorAssets
+             // FLOOR
             const floorChar = groundMap[i][j];
             const floorUrl  = floorAssets?.[floorChar];
             
             if (floorUrl) {
                 const f = BABYLON.MeshBuilder.CreateBox(`f${i}_${j}`, floorOps, scene);
                 f.position = new BABYLON.Vector3(pos.x, -FLOOR_THICKNESS / 2, pos.z);
-                f.material = getFloorMaterial(scene, floorChar, floorUrl);
+            
+                const m = new BABYLON.StandardMaterial(`fm${i}_${j}`, scene);
+                m.diffuseTexture = new BABYLON.Texture(floorUrl, scene);
+                m.maxSimultaneousLights = 8;
+                f.material = m;
             }
 
             // WALL
@@ -706,18 +668,35 @@ function createScene() {
             if (wallUrl) {
                 const w = BABYLON.MeshBuilder.CreateBox(`w${i}_${j}`, wallOps, scene);
                 w.position = new BABYLON.Vector3(pos.x, WALL_HEIGHT / 2, pos.z);
-                w.material = getWallMaterial(scene, tile, wallUrl);
+            
+                const mat = new BABYLON.StandardMaterial(`wm${i}_${j}`, scene);
+                const tex = new BABYLON.Texture(wallUrl, scene);
+            
+                tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+                tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+            
+                mat.diffuseTexture = tex;
+                mat.specularColor = new BABYLON.Color3(0, 0, 0);
+                mat.diffuseTexture.level = 0.9;
+                mat.maxSimultaneousLights = 8;
+                w.material = mat;
             }
 
-            // CEILING from ceilingMap symbol and ceilingAssets
+
+            // CEILING
             const ceilChar = ceilingMap[i][j];
             const ceilUrl  = ceilingAssets?.[ceilChar];
             
             if (ceilUrl) {
                 const c = BABYLON.MeshBuilder.CreateBox(`c${i}_${j}`, ceilOps, scene);
                 c.position = new BABYLON.Vector3(pos.x, CEILING_Y + CEILING_THICKNESS / 2, pos.z);
-                c.material = getCeilingMaterial(scene, ceilChar, ceilUrl);
+            
+                const m = new BABYLON.StandardMaterial(`cm${i}_${j}`, scene);
+                m.diffuseTexture = new BABYLON.Texture(ceilUrl, scene);
+                m.maxSimultaneousLights = 8;
+                c.material = m;
             }
+
 
             // LIGHTS from lightMap
             const lightChar = lightMap[i]?.[j];
