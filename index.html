@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.7.9</title>
+<title>ONE Dungeon v0.8.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -641,6 +641,17 @@ function createScene() {
     camera.checkCollisions = false;
     camera.minZ = 0.01;
 
+    // "Sun" light from above
+    const sun = new BABYLON.DirectionalLight(
+        "sunLight",
+        new BABYLON.Vector3(-0.3, -1.0, -0.2),  // direction: from sky downwards
+        scene
+    );
+    sun.position = new BABYLON.Vector3(0, 50, 0); // height doesn't really matter for directional
+    sun.intensity = 0.4;                          // keep low so dungeon still feels dark
+    sun.diffuse  = new BABYLON.Color3(1.0, 0.98, 0.9);  // a bit warm
+    sun.specular = new BABYLON.Color3(1.0, 1.0, 1.0);
+    
     // ambient light
     const hemi = new BABYLON.HemisphericLight(
         "hemi",
