@@ -1168,8 +1168,6 @@ function update(dt) {
     await loadAssets();
     await loadMaps(INITIAL_MAP_URL);
 
-    resizeGameSquare();        // <- set initial size
-
     scene = createScene();
     spawnMonsters(scene);
     spawnStructures(scene);
