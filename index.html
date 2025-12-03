@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.8.5</title>
+<title>ONE Dungeon v0.8.6</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -724,67 +724,65 @@ function createScene() {
 
     console.log("Map lights created:", debugLightCount, "scene lights:", scene.lights.length);
 
-    /* ---------------- Babylon GUI: HP text and buttons ---------------- */
+        /* ---------------- Babylon GUI: HP text and compact controls ---------------- */
 
     guiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
 
     // HP text at top center
     hpText = new BABYLON.GUI.TextBlock("hpText", "Player HP: 100/100");
     hpText.color = "white";
-    hpText.fontSize = 24;
+    hpText.fontSize = 22;
+    hpText.outlineWidth = 3;
+    hpText.outlineColor = "black";
     hpText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
     hpText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    hpText.paddingTop = "10px";
+    hpText.paddingTop = "8px";
     guiTexture.addControl(hpText);
 
-    // bottom control panel
-    const panel = new BABYLON.GUI.StackPanel();
-    panel.isVertical = true;
-    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    panel.paddingBottom = "20px";
-    guiTexture.addControl(panel);
+    // Controller group – small box at bottom center
+    const controller = new BABYLON.GUI.Grid();
+    controller.width = "55%";     // relative to square
+    controller.height = "22%";
+    controller.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    controller.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    controller.paddingBottom = "3%";
+    controller.addRowDefinition(0.5);
+    controller.addRowDefinition(0.5);
+    controller.addColumnDefinition(0.33);
+    controller.addColumnDefinition(0.34);
+    controller.addColumnDefinition(0.33);
+    controller.background = "rgba(0,0,0,0.35)";
+    controller.thickness = 0;
+    guiTexture.addControl(controller);
 
-    // helper to create hold buttons
+    function styleButton(btn) {
+        btn.color = "white";
+        btn.fontSize = 26;
+        btn.thickness = 2;
+        btn.cornerRadius = 12;
+        btn.background = "rgba(0,0,0,0.7)";
+    }
+
+    // hold-button helper
     function createHoldButton(name, label, onDown, onUp) {
         const btn = BABYLON.GUI.Button.CreateSimpleButton(name, label);
-        btn.width = "64px";
-        btn.height = "64px";
-        btn.fontSize = 28;
-        btn.color = "white";
-        btn.thickness = 1;
-        btn.background = "#222222";
-
+        styleButton(btn);
         btn.onPointerDownObservable.add(() => onDown(true));
         const release = () => onUp(false);
         btn.onPointerUpObservable.add(release);
         btn.onPointerOutObservable.add(release);
-
         return btn;
     }
 
-    // helper to create tap buttons (attack, potion)
+    // tap-button helper (attack, potion)
     function createTapButton(name, label, onTap) {
         const btn = BABYLON.GUI.Button.CreateSimpleButton(name, label);
-        btn.width = "64px";
-        btn.height = "64px";
-        btn.fontSize = 28;
-        btn.color = "white";
-        btn.thickness = 1;
-        btn.background = "#222222";
-
+        styleButton(btn);
         btn.onPointerUpObservable.add(() => onTap());
-
         return btn;
     }
 
-    // first row: attack, forward, potion
-    const row1 = new BABYLON.GUI.StackPanel();
-    row1.isVertical = false;
-    row1.height = "70px";
-    row1.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    panel.addControl(row1);
-
+    // row 0: attack, forward, potion
     const btnAttack = createTapButton("btnAttack", "⚔", performAttack);
     const btnForward = createHoldButton(
         "btnForward", "↑",
@@ -793,17 +791,11 @@ function createScene() {
     );
     const btnPotion = createTapButton("btnPotion", "🧪", performPotion);
 
-    row1.addControl(btnAttack);
-    row1.addControl(btnForward);
-    row1.addControl(btnPotion);
+    controller.addControl(btnAttack, 0, 0);
+    controller.addControl(btnForward, 0, 1);
+    controller.addControl(btnPotion, 0, 2);
 
-    // second row: turn left, back, turn right
-    const row2 = new BABYLON.GUI.StackPanel();
-    row2.isVertical = false;
-    row2.height = "70px";
-    row2.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    panel.addControl(row2);
-
+    // row 1: turn left, back, turn right
     const btnTurnLeft = createHoldButton(
         "btnTurnLeft", "↺",
         v => btnTurnLeftHeld = v,
@@ -820,9 +812,9 @@ function createScene() {
         v => btnTurnRightHeld = v
     );
 
-    row2.addControl(btnTurnLeft);
-    row2.addControl(btnBack);
-    row2.addControl(btnTurnRight);
+    controller.addControl(btnTurnLeft, 1, 0);
+    controller.addControl(btnBack,     1, 1);
+    controller.addControl(btnTurnRight,1, 2);
 
     return scene;
 }
