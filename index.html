@@ -2,44 +2,27 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.8.6</title>
+<title>ONE Dungeon v0.8.7</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
-    body {
+    html, body {
         margin: 0;
-        background: #111;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        height: -webkit-fill-available;
-        gap: 8px;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
         font-family: system-ui, sans-serif;
         color: #eee;
     }
 
-    #game-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-    }
-
-    #game {
-        position: relative;
-        overflow: hidden;
-        background: black;
-        border: 4px solid #555;
-        aspect-ratio: 1 / 1;
-        /* size will be set by JS */
-    }
-
+    /* Fullscreen canvas game */
     #renderCanvas {
-        width: 100%;
-        height: 100%;
         display: block;
+        width: 100vw;
+        height: 100vh;
+        background: black;
     }
 </style>
 
@@ -50,34 +33,9 @@
 
 <body>
 
-<div id="game-wrapper">
-    <div id="game">
-        <canvas id="renderCanvas"></canvas>
-    </div>
-</div>
+<canvas id="renderCanvas"></canvas>
 
 <script>
-function resizeGameSquare() {
-    const gameDiv = document.getElementById("game");
-    if (!gameDiv) return;
-
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    // portrait: use width, landscape: use height
-    let size;
-    if (vh >= vw) {
-        // portrait or square
-        size = vw;
-    } else {
-        // landscape
-        size = vh;
-    }
-
-    gameDiv.style.width  = size + "px";
-    gameDiv.style.height = size + "px";
-}
-
 /* ============================================================
    Load JSON from your GitHub assets.json (new format)
    ============================================================ */
@@ -135,7 +93,6 @@ async function loadMaps(url = INITIAL_MAP_URL) {
         
         // BGM handling
         if (data.bgm) {
-            // If the new map uses the same BGM URL, keep the old audio playing
             if (bgm && currentBgmUrl === data.bgm) {
                 bgm.loop = true;
                 bgm.volume = 0.03;
@@ -559,7 +516,7 @@ function spawnStructures(scene) {
 
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
-   plus Babylon GUI for HP + buttons
+   plus Babylon GUI for HP and controls
    ============================================================ */
 
 function createScene() {
@@ -724,7 +681,7 @@ function createScene() {
 
     console.log("Map lights created:", debugLightCount, "scene lights:", scene.lights.length);
 
-        /* ---------------- Babylon GUI: HP text and compact controls ---------------- */
+    /* ---------------- Babylon GUI: HP text and compact controls ---------------- */
 
     guiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
 
@@ -741,7 +698,7 @@ function createScene() {
 
     // Controller group – small box at bottom center
     const controller = new BABYLON.GUI.Grid();
-    controller.width = "55%";     // relative to square
+    controller.width = "55%";
     controller.height = "22%";
     controller.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
     controller.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
@@ -820,7 +777,7 @@ function createScene() {
 }
 
 /* ============================================================
-   Movement + collision
+   Movement and collision
    ============================================================ */
 
 const MOVE_SPEED = 4;
@@ -1156,14 +1113,10 @@ function update(dt) {
 /* ============================================================
    Start the game
    ============================================================ */
-resizeGameSquare();
-engine.resize();
-    
+
 (async () => {
     await loadAssets();
     await loadMaps(INITIAL_MAP_URL);
-
-    resizeGameSquare();
 
     scene = createScene();
     spawnMonsters(scene);
@@ -1180,13 +1133,12 @@ engine.resize();
     });
 })();
 
-window.addEventListener("resize", () => engine.resize());
+window.addEventListener("resize", () => {
+    engine.resize();
+});
+
 window.addEventListener("click", () => {
     if (bgm && bgm.paused) bgm.play().catch(() => {});
-});
-window.addEventListener("resize", () => {
-    resizeGameSquare();   // adjust square size based on orientation
-    engine.resize();
 });
 </script>
 
