@@ -27,11 +27,6 @@
         gap: 4px;
     }
 
-    .hp-bar {
-        font-size: 14px;
-        text-align: center;
-    }
-
     #game {
         position: relative;
         overflow: hidden;
@@ -47,38 +42,11 @@
         height: 100%;
         display: block;
     }
-
-    #controls {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 16px;
-    }
-
-    #controls .row {
-        display: flex;
-        gap: 4px;
-    }
-
-    #controls button {
-        padding: 8px 12px;
-        font-size: 16px;
-        border-radius: 6px;
-        border: 1px solid #444;
-        background: #222;
-        color: #eee;
-        cursor: pointer;
-        min-width: 80px;
-    }
-
-    #controls button:active {
-        background: #444;
-    }
 </style>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+<script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
 </head>
 
 <body>
@@ -86,20 +54,6 @@
 <div id="game-wrapper">
     <div id="game">
         <canvas id="renderCanvas"></canvas>
-    </div>
-    <div id="player-hp" class="hp-bar">Player HP: 100/100</div>
-</div>
-
-<div id="controls">
-    <div class="row">
-        <button id="btn-attack">⚔</button>
-        <button id="btn-forward">↑</button>
-        <button id="btn-potion">🧪</button>
-    </div>
-    <div class="row">
-        <button id="btn-turn-left">↺</button>
-        <button id="btn-back">↓</button>
-        <button id="btn-turn-right">↻</button>
     </div>
 </div>
 
@@ -163,11 +117,9 @@ async function loadMaps(url = INITIAL_MAP_URL) {
         if (data.bgm) {
             // If the new map uses the same BGM URL, keep the old audio playing
             if (bgm && currentBgmUrl === data.bgm) {
-                // ensure settings are correct, but do NOT reset currentTime
                 bgm.loop = true;
                 bgm.volume = 0.03;
             } else {
-                // Different BGM or none was playing: stop old and create new
                 if (bgm) {
                     bgm.pause();
                 }
@@ -177,7 +129,6 @@ async function loadMaps(url = INITIAL_MAP_URL) {
                 currentBgmUrl = data.bgm;
             }
         } else {
-            // This map has no BGM, stop any existing one
             if (bgm) {
                 bgm.pause();
                 bgm = null;
@@ -280,10 +231,8 @@ const LIGHT_TYPES = {
 };
 
 /* ============================================================
-   Base variables and DOM
+   Base variables and Babylon setup
    ============================================================ */
-
-const playerHpEl = document.getElementById("player-hp");
 
 const player = { maxHp: 100, hp: 100 };
 
@@ -309,6 +258,10 @@ const CAMERA_HEIGHT = 1.4;
 const PLAYER_RADIUS = 0.75;
 
 let wantFootsteps = false;
+
+/* GUI elements (Babylon GUI) */
+let guiTexture = null;
+let hpText = null;
 
 /* ============================================================
    MAPS - loaded from maps.json
@@ -348,26 +301,21 @@ function teleportPlayerToSpawn(spawn) {
 
     const pos = gridToWorld(spawn.i, spawn.j);
 
-    // only change position, do not touch rotation
     camera.position.x = pos.x;
     camera.position.y = CAMERA_HEIGHT;
     camera.position.z = pos.z;
 }
 
 function placePlayerAfterMapLoad(entrySpawn) {
-    // portal spawn wins
     if (entrySpawn) {
         teleportPlayerToSpawn(entrySpawn);
         return;
     }
 
-    // else use P from objectMap if it exists
     if (mapDefaultSpawn) {
         teleportPlayerToSpawn(mapDefaultSpawn);
         return;
     }
-
-    // else keep current camera position
 }
 
 /* ============================================================
@@ -376,7 +324,6 @@ function placePlayerAfterMapLoad(entrySpawn) {
 
 const monsters = [];
 
-/* Change monster status and switch animation sheet */
 function setMonsterStatus(mon, newStatus) {
     if (mon.status === newStatus) return;
 
@@ -491,7 +438,7 @@ function createMonster(scene, worldPos, type) {
 }
 
 function spawnMonsters(scene) {
-    monsters.length = 0; // clear previous monsters
+    monsters.length = 0;
     for (let i = 0; i < MAP_SIZE; i++) {
         for (let j = 0; j < MAP_SIZE; j++) {
             const sym = objectMap[i][j];
@@ -505,7 +452,6 @@ function spawnMonsters(scene) {
 }
 
 function spawnStructures(scene) {
-    // If the map has no structure info at all, do nothing
     if (!structureMap || !structureMap.length) return;
     if (!structuresDefs || Object.keys(structuresDefs).length === 0) {
         console.log("No structures defined for this map.");
@@ -545,7 +491,6 @@ function spawnStructures(scene) {
                             return;
                         }
 
-                        // Same pattern as your old working code
                         const root = new BABYLON.TransformNode(
                             `struct_${ch}_${i}_${j}`,
                             scene
@@ -554,29 +499,24 @@ function spawnStructures(scene) {
                             m.parent = root;
                         });
 
-                        // Base position at tile center
+                        const basePos = pos;
                         root.position = new BABYLON.Vector3(
-                            pos.x + (sConf.offsetX || 0),
+                            basePos.x + (sConf.offsetX || 0),
                             0,
-                            pos.z + (sConf.offsetZ || 0)
+                            basePos.z + (sConf.offsetZ || 0)
                         );
 
-                        // Simple scale control (no TILE_SIZE magic)
                         const sc = sConf.scale ?? 1;
                         root.scaling = new BABYLON.Vector3(sc, sc, sc);
 
-                        // Ground the model using its bounding box,
-                        // exactly like in v0.1.8
                         const bbox = root.getHierarchyBoundingVectors();
                         const lowestY = bbox.min.y;
                         root.position.y -= lowestY;
 
-                        // Optional additional vertical offset
                         if (typeof sConf.y === "number") {
                             root.position.y += sConf.y;
                         }
 
-                        // Y-rotation if requested
                         if (typeof sConf.rotationY === "number") {
                             root.rotation = new BABYLON.Vector3(0, sConf.rotationY, 0);
                         }
@@ -590,7 +530,6 @@ function spawnStructures(scene) {
                 );
             } catch (e) {
                 console.error("ImportMesh error (sync):", e);
-                // swallow so the map and game keep working
             }
         }
     }
@@ -600,6 +539,7 @@ function spawnStructures(scene) {
 
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
+   plus Babylon GUI for HP + buttons
    ============================================================ */
 
 function createScene() {
@@ -618,12 +558,12 @@ function createScene() {
     const base = "https://xch-devci.github.io/One-Dungeon/assets/sky/";
 
     const skyTexture = BABYLON.CubeTexture.CreateFromImages([
-        base + "Night Moon Burst_Cam_2_Left+X.png",   // +X
-        base + "Night Moon Burst_Cam_4_Up+Y.png",     // +Y
-        base + "Night Moon Burst_Cam_0_Front+Z.png",  // +Z
-        base + "Night Moon Burst_Cam_3_Right-X.png",  // -X
-        base + "Night Moon Burst_Cam_5_Down-Y.png",   // -Y
-        base + "Night Moon Burst_Cam_1_Back-Z.png"    // -Z
+        base + "Night Moon Burst_Cam_2_Left+X.png",
+        base + "Night Moon Burst_Cam_4_Up+Y.png",
+        base + "Night Moon Burst_Cam_0_Front+Z.png",
+        base + "Night Moon Burst_Cam_3_Right-X.png",
+        base + "Night Moon Burst_Cam_5_Down-Y.png",
+        base + "Night Moon Burst_Cam_1_Back-Z.png"
     ], scene);
 
     skyTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
@@ -641,18 +581,17 @@ function createScene() {
     camera.checkCollisions = false;
     camera.minZ = 0.01;
 
-    // "Sun" light from above
+    // lights
     const sun = new BABYLON.DirectionalLight(
         "sunLight",
-        new BABYLON.Vector3(-0.3, -1.0, -0.2),  // direction: from sky downwards
+        new BABYLON.Vector3(-0.3, -1.0, -0.2),
         scene
     );
-    sun.position = new BABYLON.Vector3(0, 50, 0); // height doesn't really matter for directional
-    sun.intensity = 0.4;                          // keep low so dungeon still feels dark
-    sun.diffuse  = new BABYLON.Color3(1.0, 0.98, 0.9);  // a bit warm
+    sun.position = new BABYLON.Vector3(0, 50, 0);
+    sun.intensity = 0.4;
+    sun.diffuse  = new BABYLON.Color3(1.0, 0.98, 0.9);
     sun.specular = new BABYLON.Color3(1.0, 1.0, 1.0);
     
-    // ambient light
     const hemi = new BABYLON.HemisphericLight(
         "hemi",
         new BABYLON.Vector3(0, 1, 0),
@@ -660,7 +599,6 @@ function createScene() {
     );
     hemi.intensity = 0.1;
 
-    // torch
     playerLight = new BABYLON.PointLight(
         "playerTorch",
         new BABYLON.Vector3(0.5, 0.5, 1.1),
@@ -684,10 +622,9 @@ function createScene() {
         for (let j = 0; j < MAP_SIZE; j++) {
             const pos = gridToWorld(i, j);
 
-             // FLOOR
+            // FLOOR
             const floorChar = groundMap[i][j];
             const floorUrl  = floorAssets?.[floorChar];
-            
             if (floorUrl) {
                 const f = BABYLON.MeshBuilder.CreateBox(`f${i}_${j}`, floorOps, scene);
                 f.position = new BABYLON.Vector3(pos.x, -FLOOR_THICKNESS / 2, pos.z);
@@ -701,7 +638,6 @@ function createScene() {
             // WALL
             const tile = wallMap[i][j];
             const wallUrl = wallAssets?.[tile];
-            
             if (wallUrl) {
                 const w = BABYLON.MeshBuilder.CreateBox(`w${i}_${j}`, wallOps, scene);
                 w.position = new BABYLON.Vector3(pos.x, WALL_HEIGHT / 2, pos.z);
@@ -719,11 +655,9 @@ function createScene() {
                 w.material = mat;
             }
 
-
             // CEILING
             const ceilChar = ceilingMap[i][j];
             const ceilUrl  = ceilingAssets?.[ceilChar];
-            
             if (ceilUrl) {
                 const c = BABYLON.MeshBuilder.CreateBox(`c${i}_${j}`, ceilOps, scene);
                 c.position = new BABYLON.Vector3(pos.x, CEILING_Y + CEILING_THICKNESS / 2, pos.z);
@@ -733,7 +667,6 @@ function createScene() {
                 m.maxSimultaneousLights = 8;
                 c.material = m;
             }
-
 
             // LIGHTS from lightMap
             const lightChar = lightMap[i]?.[j];
@@ -771,6 +704,106 @@ function createScene() {
 
     console.log("Map lights created:", debugLightCount, "scene lights:", scene.lights.length);
 
+    /* ---------------- Babylon GUI: HP text and buttons ---------------- */
+
+    guiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
+
+    // HP text at top center
+    hpText = new BABYLON.GUI.TextBlock("hpText", "Player HP: 100/100");
+    hpText.color = "white";
+    hpText.fontSize = 24;
+    hpText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    hpText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    hpText.paddingTop = "10px";
+    guiTexture.addControl(hpText);
+
+    // bottom control panel
+    const panel = new BABYLON.GUI.StackPanel();
+    panel.isVertical = true;
+    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    panel.paddingBottom = "20px";
+    guiTexture.addControl(panel);
+
+    // helper to create hold buttons
+    function createHoldButton(name, label, onDown, onUp) {
+        const btn = BABYLON.GUI.Button.CreateSimpleButton(name, label);
+        btn.width = "64px";
+        btn.height = "64px";
+        btn.fontSize = 28;
+        btn.color = "white";
+        btn.thickness = 1;
+        btn.background = "#222222";
+
+        btn.onPointerDownObservable.add(() => onDown(true));
+        const release = () => onUp(false);
+        btn.onPointerUpObservable.add(release);
+        btn.onPointerOutObservable.add(release);
+
+        return btn;
+    }
+
+    // helper to create tap buttons (attack, potion)
+    function createTapButton(name, label, onTap) {
+        const btn = BABYLON.GUI.Button.CreateSimpleButton(name, label);
+        btn.width = "64px";
+        btn.height = "64px";
+        btn.fontSize = 28;
+        btn.color = "white";
+        btn.thickness = 1;
+        btn.background = "#222222";
+
+        btn.onPointerUpObservable.add(() => onTap());
+
+        return btn;
+    }
+
+    // first row: attack, forward, potion
+    const row1 = new BABYLON.GUI.StackPanel();
+    row1.isVertical = false;
+    row1.height = "70px";
+    row1.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    panel.addControl(row1);
+
+    const btnAttack = createTapButton("btnAttack", "⚔", performAttack);
+    const btnForward = createHoldButton(
+        "btnForward", "↑",
+        v => btnForwardHeld = v,
+        v => btnForwardHeld = v
+    );
+    const btnPotion = createTapButton("btnPotion", "🧪", performPotion);
+
+    row1.addControl(btnAttack);
+    row1.addControl(btnForward);
+    row1.addControl(btnPotion);
+
+    // second row: turn left, back, turn right
+    const row2 = new BABYLON.GUI.StackPanel();
+    row2.isVertical = false;
+    row2.height = "70px";
+    row2.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    panel.addControl(row2);
+
+    const btnTurnLeft = createHoldButton(
+        "btnTurnLeft", "↺",
+        v => btnTurnLeftHeld = v,
+        v => btnTurnLeftHeld = v
+    );
+    const btnBack = createHoldButton(
+        "btnBack", "↓",
+        v => btnBackHeld = v,
+        v => btnBackHeld = v
+    );
+    const btnTurnRight = createHoldButton(
+        "btnTurnRight", "↻",
+        v => btnTurnRightHeld = v,
+        v => btnTurnRightHeld = v
+    );
+
+    row2.addControl(btnTurnLeft);
+    row2.addControl(btnBack);
+    row2.addControl(btnTurnRight);
+
     return scene;
 }
 
@@ -782,13 +815,11 @@ const MOVE_SPEED = 4;
 const TURN_SPEED = Math.PI;
 
 function isObstacleTile(i, j) {
-    // walls
     const wallTile = wallMap[i]?.[j];
     if (wallAssets && wallTile && (wallTile in wallAssets)) {
         return true;
     }
 
-    // structures
     const sChar = structureMap[i]?.[j];
     if (sChar && sChar !== "." && structuresDefs && structuresDefs[sChar]) {
         const sConf = structuresDefs[sChar];
@@ -800,7 +831,6 @@ function isObstacleTile(i, j) {
     return false;
 }
 
-
 function isCircleCollidingWithWalls(pos, radius = PLAYER_RADIUS) {
     const g = worldToGrid(pos.x, pos.z);
     if (g.i < 0 || g.i >= MAP_SIZE || g.j < 0 || g.j >= MAP_SIZE) return true;
@@ -811,7 +841,6 @@ function isCircleCollidingWithWalls(pos, radius = PLAYER_RADIUS) {
             const wj = g.j + dj;
             if (wi < 0 || wi >= MAP_SIZE || wj < 0 || wj >= MAP_SIZE) continue;
 
-            // skip if there is no wall and no solid structure here
             if (!isObstacleTile(wi, wj)) continue;
 
             const xMin = (wj - HALF_MAP) * TILE_SIZE;
@@ -876,20 +905,6 @@ let btnForwardHeld = false,
 
 const keys = { forward: false, back: false, left: false, right: false };
 
-function bindHold(id, setter) {
-    const b = document.getElementById(id);
-    b.addEventListener("mousedown", () => setter(true));
-    b.addEventListener("mouseup",   () => setter(false));
-    b.addEventListener("mouseleave",() => setter(false));
-    b.addEventListener("touchstart", e => { e.preventDefault(); setter(true); });
-    b.addEventListener("touchend",   e => { e.preventDefault(); setter(false); });
-}
-
-bindHold("btn-forward", v => btnForwardHeld = v);
-bindHold("btn-back",    v => btnBackHeld = v);
-bindHold("btn-turn-left",  v => btnTurnLeftHeld = v);
-bindHold("btn-turn-right", v => btnTurnRightHeld = v);
-
 window.addEventListener("keydown", e => {
     if (e.key === "w" || e.key === "ArrowUp")    keys.forward = true;
     if (e.key === "s" || e.key === "ArrowDown")  keys.back    = true;
@@ -905,10 +920,10 @@ window.addEventListener("keyup", e => {
 });
 
 /* ============================================================
-   Attack and potion (player controls)
+   Attack and potion actions
    ============================================================ */
 
-document.getElementById("btn-attack").onclick = () => {
+function performAttack() {
     if (attackSound) {
         attackSound.currentTime = 0;
         attackSound.play().catch(() => {});
@@ -929,9 +944,9 @@ document.getElementById("btn-attack").onclick = () => {
             }
         }
     }
-};
+}
 
-document.getElementById("btn-potion").onclick = () => {
+function performPotion() {
     if (player.hp <= 0) return;
 
     player.hp = Math.min(player.maxHp, player.hp + 20);
@@ -939,10 +954,10 @@ document.getElementById("btn-potion").onclick = () => {
         potionSound.currentTime = 0;
         potionSound.play().catch(() => {});
     }
-};
+}
 
 /* ============================================================
-   Monster animation (generic for any cols/rows/frames)
+   Monster animation
    ============================================================ */
 
 function animateMonster(mon, dt) {
@@ -1057,7 +1072,6 @@ async function switchMap(portalCfg) {
     spawnMonsters(scene);
     spawnStructures(scene);
     
-    // portal spawn has priority over 'P'
     placePlayerAfterMapLoad(portalCfg.spawn);
 
     portalCooldown = 0.5;
@@ -1106,10 +1120,8 @@ function update(dt) {
         if (!wantFootsteps && !footstepLoop.paused) footstepLoop.pause();
     }
 
-    // check portal after movement
     checkPortal();
 
-    // torch flicker
     torchTime += dt;
     const flicker =
         Math.sin(torchTime * 6.3) * 0.08 +
@@ -1124,7 +1136,9 @@ function update(dt) {
         if (m.alive) animateMonster(m, dt);
     }
 
-    playerHpEl.textContent = `Player HP: ${player.hp}/${player.maxHp}`;
+    if (hpText) {
+        hpText.text = `Player HP: ${player.hp}/${player.maxHp}`;
+    }
 }
 
 /* ============================================================
@@ -1155,7 +1169,6 @@ window.addEventListener("click", () => {
     if (bgm && bgm.paused) bgm.play().catch(() => {});
 });
 </script>
-
 
 </body>
 </html>
