@@ -1164,10 +1164,13 @@ function update(dt) {
 /* ============================================================
    Start the game
    ============================================================ */
-
+resizeGameSquare();
+    
 (async () => {
     await loadAssets();
     await loadMaps(INITIAL_MAP_URL);
+
+    resizeGameSquare();
 
     scene = createScene();
     spawnMonsters(scene);
