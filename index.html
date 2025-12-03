@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.8.0</title>
+<title>ONE Dungeon v0.8.1</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -292,7 +292,7 @@ let torchTime = 0;
 
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
-engine.setHardwareScalingLevel(1.5);
+engine.setHardwareScalingLevel(1.3);
 
 let scene, camera, playerLight;
 
@@ -618,12 +618,12 @@ function createScene() {
     const base = "https://xch-devci.github.io/One-Dungeon/assets/sky/";
 
     const skyTexture = BABYLON.CubeTexture.CreateFromImages([
-        base + "Sky_Day_BlueSky_Nothing_Cam_2_Left+X.png",   // +X
-        base + "Sky_Day_BlueSky_Nothing_Cam_4_Up+Y.png",     // +Y
-        base + "Sky_Day_BlueSky_Nothing_Cam_0_Front+Z.png",  // +Z
-        base + "Sky_Day_BlueSky_Nothing_Cam_3_Right-X.png",  // -X
-        base + "Sky_Day_BlueSky_Nothing_Cam_5_Down-Y.png",   // -Y
-        base + "Sky_Day_BlueSky_Nothing_Cam_1_Back-Z.png"    // -Z
+        base + "Night Moon Burst_Cam_2_Left+X.png",   // +X
+        base + "Night Moon Burst_Cam_4_Up+Y.png",     // +Y
+        base + "Night Moon Burst_Cam_0_Front+Z.png",  // +Z
+        base + "Night Moon Burst_Cam_3_Right-X.png",  // -X
+        base + "Night Moon Burst_Cam_5_Down-Y.png",   // -Y
+        base + "Night Moon Burst_Cam_1_Back-Z.png"    // -Z
     ], scene);
 
     skyTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
