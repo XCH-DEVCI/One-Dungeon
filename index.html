@@ -32,6 +32,7 @@
         overflow: hidden;
         background: black;
         border: 4px solid #555;
+        /* size will be set by JS */
     }
 
     #renderCanvas {
@@ -55,6 +56,27 @@
 </div>
 
 <script>
+function resizeGameSquare() {
+    const gameDiv = document.getElementById("game");
+    if (!gameDiv) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // portrait: use width, landscape: use height
+    let size;
+    if (vh >= vw) {
+        // portrait or square
+        size = vw;
+    } else {
+        // landscape
+        size = vh;
+    }
+
+    gameDiv.style.width  = size + "px";
+    gameDiv.style.height = size + "px";
+}
+
 /* ============================================================
    Load JSON from your GitHub assets.json (new format)
    ============================================================ */
@@ -1146,6 +1168,8 @@ function update(dt) {
     await loadAssets();
     await loadMaps(INITIAL_MAP_URL);
 
+    resizeGameSquare();        // <- set initial size
+
     scene = createScene();
     spawnMonsters(scene);
     spawnStructures(scene);
@@ -1164,6 +1188,10 @@ function update(dt) {
 window.addEventListener("resize", () => engine.resize());
 window.addEventListener("click", () => {
     if (bgm && bgm.paused) bgm.play().catch(() => {});
+});
+window.addEventListener("resize", () => {
+    resizeGameSquare();   // adjust square size based on orientation
+    engine.resize();      // let Babylon adapt to new canvas size
 });
 </script>
 
