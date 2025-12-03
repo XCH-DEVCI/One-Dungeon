@@ -706,11 +706,11 @@ function createScene() {
 
     // Controller group – small box at bottom center
     const controller = new BABYLON.GUI.Grid();
-    controller.width = "55%";
-    controller.height = "22%";
+    controller.width = "70%";
+    controller.height = "30%";
     controller.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
     controller.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    controller.paddingBottom = "12%";
+    controller.paddingBottom = "20%";
     controller.addRowDefinition(0.5);
     controller.addRowDefinition(0.5);
     controller.addColumnDefinition(0.33);
@@ -723,7 +723,7 @@ function createScene() {
     function styleButton(btn) {
         btn.color = "white";
         btn.fontSize = 26;
-        btn.thickness = 2;
+        btn.thickness = 0;
         btn.cornerRadius = 12;
         btn.background = "rgba(0,0,0,0.7)";
     }
