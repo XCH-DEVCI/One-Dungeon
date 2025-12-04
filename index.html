@@ -561,13 +561,13 @@ function createScene() {
     skyboxMaterial.disableLighting = true;
     
     // your single skybox image (the one you showed)
-    const skyUrl = "https://xch-devci.github.io/One-Dungeon/assets/sky/Cubemap_Sky_25-512x512.png";
+    const skyUrl = "https://xch-devci.github.io/One-Dungeon/assets/sky/skybox.png";
     
     // EquiRectangularCubeTexture converts one pano into a cube texture
     const skyTexture = new BABYLON.EquiRectangularCubeTexture(
         skyUrl,
         scene,
-        512,        // resolution for internal cubemap, can increase if needed
+        1024,        // resolution for internal cubemap, can increase if needed
         false,      // noMipmap
         true        // gammaSpace, good for regular LDR PNG/JPG
     );
