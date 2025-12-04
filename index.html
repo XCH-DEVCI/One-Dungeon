@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.9.2</title>
+<title>ONE Dungeon v0.9.3</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -553,30 +553,32 @@ function createScene() {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
-    // --- SKYBOX START ---
-    const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {
-        size: 200
-    }, scene);
-
+    // --- SKYBOX START (single panoramic image) ---
+    const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 200 }, scene);
+    
     const skyboxMaterial = new BABYLON.StandardMaterial("skyBoxMat", scene);
     skyboxMaterial.backFaceCulling = false;
     skyboxMaterial.disableLighting = true;
-
-    const base = "https://xch-devci.github.io/One-Dungeon/assets/sky/";
-
-    const skyTexture = BABYLON.CubeTexture.CreateFromImages([
-        base + "Night Moon Burst_Cam_2_Left+X.png",
-        base + "Night Moon Burst_Cam_4_Up+Y.png",
-        base + "Night Moon Burst_Cam_0_Front+Z.png",
-        base + "Night Moon Burst_Cam_3_Right-X.png",
-        base + "Night Moon Burst_Cam_5_Down-Y.png",
-        base + "Night Moon Burst_Cam_1_Back-Z.png"
-    ], scene);
-
+    
+    // your single skybox image (the one you showed)
+    const skyUrl = "https://xch-devci.github.io/One-Dungeon/assets/sky/Cubemap_Sky_25-512x512.png";
+    
+    // EquiRectangularCubeTexture converts one pano into a cube texture
+    const skyTexture = new BABYLON.EquiRectangularCubeTexture(
+        skyUrl,
+        scene,
+        512,        // resolution for internal cubemap, can increase if needed
+        false,      // noMipmap
+        true        // gammaSpace, good for regular LDR PNG/JPG
+    );
+    
     skyTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+    
     skyboxMaterial.reflectionTexture = skyTexture;
     skybox.material = skyboxMaterial;
+    skybox.infiniteDistance = true;
     // --- SKYBOX END ---
+
     
     // camera
     camera = new BABYLON.UniversalCamera(
