@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v0.9.4</title>
+<title>ONE Dungeon v0.9.5</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -553,33 +553,31 @@ function createScene() {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
-    // --- SKYBOX START (single panoramic image) ---
-    const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 200 }, scene);
+    // --- SKYBOX START ---
+    const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {
+        size: 200
+    }, scene);
     
     const skyboxMaterial = new BABYLON.StandardMaterial("skyBoxMat", scene);
     skyboxMaterial.backFaceCulling = false;
     skyboxMaterial.disableLighting = true;
     
-    // your single skybox image (the one you showed)
-    const skyUrl = "https://xch-devci.github.io/One-Dungeon/assets/sky/skybox.png";
+    const base = "https://xch-devci.github.io/One-Dungeon/assets/skybox/";
     
-    // EquiRectangularCubeTexture converts one pano into a cube texture
-    const skyTexture = new BABYLON.EquiRectangularCubeTexture(
-        skyUrl,
-        scene,
-        1024,        // resolution for internal cubemap, can increase if needed
-        false,      // noMipmap
-        true        // gammaSpace, good for regular LDR PNG/JPG
-    );
+    const skyTexture = BABYLON.CubeTexture.CreateFromImages([
+        base + "Blue-Orange Skybox_LEFT.png",
+        base + "Blue-Orange Skybox_TOP.png",
+        base + "Blue-Orange Skybox_FRONT.png",
+        base + "Blue-Orange Skybox_RIGHT.png",
+        base + "Blue-Orange Skybox_BOTTOM.png",
+        base + "Blue-Orange Skybox_BACK.png"
+    ], scene);
     
     skyTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-    
     skyboxMaterial.reflectionTexture = skyTexture;
     skybox.material = skyboxMaterial;
-    skybox.infiniteDistance = true;
     // --- SKYBOX END ---
 
-    
     // camera
     camera = new BABYLON.UniversalCamera(
         "playerCamera",
