@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.6</title>
+<title>ONE Dungeon v1.0.7</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -356,54 +356,11 @@ function setMonsterStatus(mon, newStatus) {
     mon.animFrame = 0;
     mon.animTime = 0;
 
-    const mat = mon.mesh.material;
-    mat.diffuseTexture = sDef.texture;
-
     if (name === "idle")      mon.animSpeed = 3;
     else if (name === "walk") mon.animSpeed = 6;
     else if (name === "run")  mon.animSpeed = 10;
     else if (name === "attack") mon.animSpeed = 8;
 }
-
-async function createVoxelFrame(scene, spriteUrl, frameX, frameY, cols, rows, scale = 0.15) {
-    // Load full sprite sheet
-    const img = await loadImagePixels(spriteUrl);
-    const frameWidth = img.width / cols;
-    const frameHeight = img.height / rows;
-
-    // Extract 1 frame into temp canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = frameWidth;
-    canvas.height = frameHeight;
-    const ctx = canvas.getContext("2d");
-
-    // (sx, sy) = top-left of selected frame
-    const sx = frameX * frameWidth;
-    const sy = frameY * frameHeight;
-
-    ctx.drawImage(
-        img.image, // <== we will attach original image into the object
-        sx, sy, frameWidth, frameHeight,
-        0, 0, frameWidth, frameHeight
-    );
-
-    const frameImg = {
-        width: frameWidth,
-        height: frameHeight,
-        data: ctx.getImageData(0, 0, frameWidth, frameHeight).data
-    };
-
-    // Convert this frame → voxels
-    const vox = pngToVoxels(frameImg);
-
-    // Build voxel mesh group
-    const root = new BABYLON.TransformNode("voxelFrame", scene);
-    buildVoxels(vox, scene, 0, 0, 0, scale).forEach(v => v.parent = root);
-
-    root.setEnabled(false);
-    return root;
-}
-
     
 async function createMonster(scene, worldPos, type) {
     const conf = ASSETS.monsters?.[type];
@@ -424,16 +381,11 @@ async function createMonster(scene, worldPos, type) {
             const fx = f % cols;
             const fy = Math.floor(f / cols);
 
-            const voxelFrame = await createVoxelFrame(
-                scene,
-                sConf.sprite,
-                fx, fy,
-                cols, rows,
-                conf.voxelScale ?? 0.10   // <-- monster voxel size
-            );
+            const paper = createPaperSpriteMesh(scene, 1.2, 1.2, 0.05);
+            applySpriteFrame(paper, sConf.sprite, cols, rows, f);
+            paper.setEnabled(false);
+            frameMeshes.push(paper);
 
-            voxelFrame.position = new BABYLON.Vector3(0, 0, 0);
-            frameMeshes.push(voxelFrame);
         }
 
         statusDefs[name] = {
@@ -471,6 +423,13 @@ async function createMonster(scene, worldPos, type) {
         wanderTarget: null,
         wanderCooldown: 0
     };
+
+    // Attach all frame meshes to monster root
+    for (const sDef of Object.values(statusDefs)) {
+        for (const frame of sDef.frameMeshes) {
+            frame.parent = root;
+        }
+    }
 
     setMonsterStatus(monster, "idle");
     return monster;
@@ -886,48 +845,46 @@ function pngToVoxels(img) {
 
     return voxels;
 }
+    
+function applySpriteFrame(mesh, url, cols, rows, frameIndex) {
+    const tex = new BABYLON.Texture(url, mesh.getScene());
+    tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    tex.wrapY = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    tex.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
 
-// 3. Build voxel mesh inside BabylonJS scene
-function buildVoxels(voxels, scene, worldX, worldY, worldZ, scale = 0.15) {
-    const base = BABYLON.MeshBuilder.CreateBox("voxelBase", { size: 1 }, scene);
-    base.isVisible = false;
+    const fx = frameIndex % cols;
+    const fy = Math.floor(frameIndex / cols);
 
-    const meshes = [];
+    tex.uScale = 1 / cols;
+    tex.vScale = 1 / rows;
+    tex.uOffset = fx / cols;
+    tex.vOffset = fy / rows;
 
-    const sizeX = voxels.length;
-    const sizeY = voxels[0].length;
-    const sizeZ = voxels[0][0].length;
-
-    for (let x = 0; x < sizeX; x++) {
-        for (let y = 0; y < sizeY; y++) {
-            for (let z = 0; z < sizeZ; z++) {
-                const v = voxels[x][y][z];
-                if (!v.exists) continue;
-
-                const inst = base.createInstance(`vx_${x}_${y}_${z}`);
-                inst.position.set(
-                    worldX + x * scale,
-                    worldY + y * scale,
-                    worldZ + z * scale
-                );
-                inst.scaling.set(scale, scale, scale);
-
-                const mat = new BABYLON.StandardMaterial("vm", scene);
-                mat.diffuseColor = new BABYLON.Color3(
-                    v.color.r / 255,
-                    v.color.g / 255,
-                    v.color.b / 255
-                );
-                inst.material = mat;
-
-                meshes.push(inst);
-            }
-        }
-    }
-
-    return meshes;
+    mesh.material.diffuseTexture = tex;
+    mesh.material.opacityTexture = tex;
 }
 
+
+// 3. Build voxel mesh inside BabylonJS scene
+function createPaperSpriteMesh(scene, width, height, thickness = 0.05) {
+    const mesh = BABYLON.MeshBuilder.CreateBox("paperSprite", {
+        width: width,
+        height: height,
+        depth: thickness
+    }, scene);
+
+    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y; // face camera horizontally only
+
+    mesh.material = new BABYLON.StandardMaterial("paperMat", scene);
+    mesh.material.diffuseTexture = null;
+    mesh.material.emissiveTexture = null;
+    mesh.material.opacityTexture = null;
+
+    mesh.material.disableLighting = false;
+    mesh.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+
+    return mesh;
+}
 
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
