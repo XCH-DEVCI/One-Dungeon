@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.1.0</title>
+<title>ONE Dungeon v1.0.4</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -325,46 +325,6 @@ function placePlayerAfterMapLoad(entrySpawn) {
     }
 }
 
-async function getSpriteYCorrection(url, cols, rows, frameIndex) {
-    return new Promise(resolve => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.width = img.width;
-            canvas.height = img.height;
-
-            ctx.drawImage(img, 0, 0);
-
-            const wFrame = img.width / cols;
-            const hFrame = img.height / rows;
-
-            const fx = frameIndex % cols;
-            const fy = Math.floor(frameIndex / cols);
-
-            const x0 = fx * wFrame;
-            const y0 = fy * hFrame;
-
-            const data = ctx.getImageData(x0, y0, wFrame, hFrame).data;
-
-            let lowest = 0;
-            for (let y = hFrame - 1; y >= 0; y--) {
-                for (let x = 0; x < wFrame; x++) {
-                    const idx = (y * wFrame + x) * 4 + 3;  // alpha
-                    if (data[idx] > 10) {
-                        lowest = y;
-                        resolve(lowest / hFrame * 1.2);  // scale to mesh height
-                        return;
-                    }
-                }
-            }
-            resolve(0.6);
-        };
-        img.src = url;
-    });
-}
-
 /* ============================================================
    Monster System with status (idle, walk, run, attack)
    ============================================================ */
@@ -396,112 +356,107 @@ function setMonsterStatus(mon, newStatus) {
     mon.animFrame = 0;
     mon.animTime = 0;
 
+    const mat = mon.mesh.material;
+    mat.diffuseTexture = sDef.texture;
+
     if (name === "idle")      mon.animSpeed = 3;
     else if (name === "walk") mon.animSpeed = 6;
     else if (name === "run")  mon.animSpeed = 10;
     else if (name === "attack") mon.animSpeed = 8;
 }
-    
-async function createMonster(scene, worldPos, type) {
+
+function createMonster(scene, worldPos, type) {
     const conf = ASSETS.monsters?.[type];
     if (!conf) return null;
+
+    const plane = BABYLON.MeshBuilder.CreatePlane(
+        "monster_" + type,
+        { size: conf.scale ?? 2.4 },
+        scene
+    );
+
+    plane.position = new BABYLON.Vector3(worldPos.x, 1.1, worldPos.z);
+    plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+    const mat = new BABYLON.StandardMaterial("monsterMat_" + type, scene);
+    mat.backFaceCulling = false;
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.maxSimultaneousLights = 8;
+    plane.material = mat;
 
     const statusDefs = {};
     const statusTable = conf.status || {};
 
-    // --- Create voxel meshes for each animation frame ---
     for (const [name, sConf] of Object.entries(statusTable)) {
         const cols = sConf.cols || 1;
         const rows = sConf.rows || 1;
         const frames = sConf.frames || (cols * rows);
 
-        const frameMeshes = [];
+        const tex = new BABYLON.Texture(sConf.sprite, scene);
+        tex.hasAlpha = true;
+        tex.uScale = 1 / cols;
+        tex.vScale = 1 / rows;
+        tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+        tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
 
-        for (let f = 0; f < frames; f++) {
-            const fx = f % cols;
-            const fy = Math.floor(f / cols);
-
-            const paper = createPaperSpriteMesh(scene, 1.2, 1.2, 0.05);
-            applySpriteFrame(paper, sConf.sprite, cols, rows, f);
-
-            const correction = await getSpriteYCorrection(sConf.sprite, cols, rows, f);
-            paper.position.y += correction;
-            
-            paper.setEnabled(false);
-            frameMeshes.push(paper);
-
-        }
-
-        statusDefs[name] = {
-            frames,
-            cols,
-            rows,
-            frameMeshes
-        };
+        statusDefs[name] = { texture: tex, cols, rows, frames };
     }
 
-    // Monster root node
-    const root = new BABYLON.TransformNode("monster_" + type, scene);
-    root.position = new BABYLON.Vector3(worldPos.x, 0, worldPos.z);
+    if (Object.keys(statusDefs).length === 0) {
+        console.warn("Monster has no status animations:", type);
+        return null;
+    }
 
     const monster = {
-        mesh: root,
+        mesh: plane,
         type,
         hp: conf.maxHp ?? 50,
         maxHp: conf.maxHp ?? 50,
         alive: true,
         cooldown: 0,
+
         statusDefs,
         status: null,
+
         animFrame: 0,
         animTime: 0,
         animSpeed: conf.animSpeed ?? 6,
+        frames: 1,
+        cols: 1,
+        rows: 1,
+
         detectRange: conf.detectRange ?? 8,
         attackRange: conf.attackRange ?? 1.5,
         walkSpeed: conf.speed ?? 1.2,
         runSpeed: conf.runSpeed ?? ((conf.speed ?? 1.2) * 1.8),
         idleRadius: conf.idleRadius ?? 3.0,
+
         attackDamage: conf.attackDamage ?? 4,
         radius: conf.radius ?? 0.4,
-        idleCenter: root.position.clone(),
+
+        idleCenter: plane.position.clone(),
         wanderTarget: null,
         wanderCooldown: 0
     };
 
-    // Attach all frame meshes to monster root
-    for (const sDef of Object.values(statusDefs)) {
-        for (const frame of sDef.frameMeshes) {
-            frame.parent = root;
-        }
-    }
-    
-    // Make sure first frame is visible BEFORE animation loop
-    const idleDef = statusDefs["idle"];
-    if (idleDef) {
-        idleDef.frameMeshes[0].setEnabled(true);
-    }
-    
     setMonsterStatus(monster, "idle");
+
     return monster;
 }
 
-
-async function spawnMonsters(scene) {
+function spawnMonsters(scene) {
     monsters.length = 0;
-
     for (let i = 0; i < MAP_SIZE; i++) {
         for (let j = 0; j < MAP_SIZE; j++) {
             const sym = objectMap[i][j];
             if (!ASSETS.monsters || !ASSETS.monsters[sym]) continue;
 
             const pos = gridToWorld(i, j);
-            const monster = await createMonster(scene, pos, sym);  // <--- FIX
-
+            const monster = createMonster(scene, pos, sym);
             if (monster) monsters.push(monster);
         }
     }
 }
-
 
 function spawnStructures(scene) {
     if (!structureMap || !structureMap.length) return;
@@ -860,10 +815,8 @@ async function loadImagePixels(url) {
             resolve({
                 width: img.width,
                 height: img.height,
-                data: imageData.data,
-                image: img
+                data: imageData.data
             });
-
         };
         img.src = url;
     });
@@ -895,43 +848,36 @@ function pngToVoxels(img) {
 
     return voxels;
 }
-    
-function applySpriteFrame(mesh, url, cols, rows, frameIndex) {
-    const tex = new BABYLON.Texture(url, mesh.getScene());
-    tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    tex.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
-
-    const fx = frameIndex % cols;
-    const fy = Math.floor(frameIndex / cols);
-
-    tex.uScale = 1 / cols;
-    tex.vScale = 1 / rows;
-    tex.uOffset = fx / cols;
-    tex.vOffset = fy / rows;
-
-    mesh.material.diffuseTexture = tex;
-    mesh.material.opacityTexture = tex;
-}
-
 
 // 3. Build voxel mesh inside BabylonJS scene
-function createPaperSpriteMesh(scene, width, height, thickness = 0.05) {
-    const mesh = BABYLON.MeshBuilder.CreateBox("paperSprite", {
-        width: width,
-        height: height,
-        depth: thickness
-    }, scene);
+function buildVoxels(voxels, scene, worldX, worldY, worldZ, scale = 0.15) {
+    const base = BABYLON.MeshBuilder.CreateBox("voxelBase", { size: 1 }, scene);
+    base.isVisible = false;
 
-    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+    const sizeX = voxels.length;
+    const sizeY = voxels[0].length;
+    const sizeZ = voxels[0][0].length;
 
-    const mat = new BABYLON.StandardMaterial("paperMat", scene);
-    mat.useAlphaFromDiffuseTexture = true;   // <-- IMPORTANT
-    mat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-    mat.backFaceCulling = false;             // <-- IMPORTANT
-    mesh.material = mat;
+    for (let x = 0; x < sizeX; x++) {
+        for (let y = 0; y < sizeY; y++) {
+            for (let z = 0; z < sizeZ; z++) {
+                const v = voxels[x][y][z];
+                if (!v.exists) continue;
 
-    return mesh;
+                const inst = base.createInstance(`vx_${x}_${y}_${z}`);
+                inst.position.set(
+                    worldX + x * scale,
+                    worldY + y * scale,
+                    worldZ + z * scale
+                );
+                inst.scaling.set(scale, scale, scale);
+
+                const mat = new BABYLON.StandardMaterial("vm", scene);
+                mat.diffuseColor = new BABYLON.Color3(v.color.r / 255, v.color.g / 255, v.color.b / 255);
+                inst.material = mat;
+            }
+        }
+    }
 }
 
 /* ============================================================
@@ -1315,8 +1261,6 @@ function clearAllHeldButtons() {
     btnBackHeld = false;
     btnTurnLeftHeld = false;
     btnTurnRightHeld = false;
-    btnLookUpHeld = false;
-    btnLookDownHeld = false;
 }
     
 window.addEventListener("keydown", e => {
@@ -1384,25 +1328,23 @@ function performPotion() {
    ============================================================ */
 
 function animateMonster(mon, dt) {
-    const s = mon.statusDefs[mon.status];
-    if (!s) return;
+    if (!mon.frames || mon.frames <= 1) return;
 
     mon.animTime += dt;
+
     const frameDuration = 1 / mon.animSpeed;
 
     while (mon.animTime >= frameDuration) {
-        mon.animFrame = (mon.animFrame + 1) % s.frames;
+        mon.animFrame = (mon.animFrame + 1) % mon.frames;
         mon.animTime -= frameDuration;
     }
 
-    // hide all frames
-    for (let f = 0; f < s.frames; f++) {
-        s.frameMeshes[f].setEnabled(false);
-    }
+    const fx = mon.animFrame % mon.cols;
+    const fy = Math.floor(mon.animFrame / mon.cols);
 
-    // show one frame
-    s.frameMeshes[mon.animFrame].setEnabled(true);
-    s.frameMeshes[mon.animFrame].parent = mon.mesh;
+    const tex = mon.mesh.material.diffuseTexture;
+    tex.uOffset = fx / mon.cols;
+    tex.vOffset = fy / mon.rows;
 }
 
 /* ============================================================
@@ -1494,7 +1436,7 @@ async function switchMap(portalCfg) {
 
     camera.rotation.y = preservedYaw;
     
-    await spawnMonsters(scene);
+    spawnMonsters(scene);
     spawnStructures(scene);
     
     placePlayerAfterMapLoad(portalCfg.spawn);
@@ -1592,7 +1534,7 @@ function update(dt) {
     await loadMaps(INITIAL_MAP_URL);
 
     scene = createScene();
-    await spawnMonsters(scene);
+    spawnMonsters(scene);
     spawnStructures(scene);
 
     placePlayerAfterMapLoad(null);
