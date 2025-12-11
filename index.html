@@ -688,6 +688,80 @@ void main(){
 }
 `;
 
+BABYLON.Effect.ShadersStore["procWallVertexShader"] = `
+precision highp float;
+attribute vec3 position;
+attribute vec2 uv;
+uniform mat4 worldViewProjection;
+varying vec2 vUV;
+void main(void){
+    vUV = uv * 4.0;   // 放大 UV 讓磚較小
+    gl_Position = worldViewProjection * vec4(position,1.0);
+}
+`;
+
+BABYLON.Effect.ShadersStore["procWallFragmentShader"] = `
+precision highp float;
+varying vec2 vUV;
+uniform float time;
+
+// 簡易 hash
+float hash(vec2 p){ return fract(sin(dot(p, vec2(23.1, 91.7))) * 43758.5453); }
+
+// noise
+float noise(vec2 p){
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0,0.0));
+    float c = hash(i + vec2(0.0,1.0));
+    float d = hash(i + vec2(1.0,1.0));
+    vec2 u = smoothstep(0.0, 1.0, f);
+    return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+}
+
+// fractal noise
+float fbm(vec2 p){
+    float v = 0.0;
+    float a = 0.5;
+    for(int i=0;i<5;i++){
+        v += a * noise(p);
+        p = p * 2.0 + 1.7;
+        a *= 0.5;
+    }
+    return v;
+}
+
+void main(){
+    vec2 uv = vUV;
+
+    // 基礎石頭色
+    float n = fbm(uv * 1.2);
+    vec3 base = mix(vec3(0.05,0.05,0.07), vec3(0.12,0.1,0.15), n);
+
+    // 磚塊線條
+    float brickY = step(0.95, fract(uv.y * 0.5));
+    float brickX = step(0.98, fract(uv.x * 1.0));
+
+    float mortar = max(brickX, brickY);
+    base = mix(base, vec3(0.02,0.02,0.03), mortar);
+
+    // 裂縫效果
+    float crack = smoothstep(0.0, 0.03, abs(noise(uv * 6.0)-0.5));
+    base -= crack * 0.3;
+
+    gl_FragColor = vec4(base, 1.0);
+}
+`;
+
+const wallShader = new BABYLON.ShaderMaterial("wallShader", scene, {
+    vertex: "procWall",
+    fragment: "procWall"
+}, {
+    attributes: ["position", "uv"],
+    uniforms: ["worldViewProjection", "time"]
+});
+
     
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
@@ -789,18 +863,7 @@ function createScene() {
             if (wallUrl) {
                 const w = BABYLON.MeshBuilder.CreateBox(`w${i}_${j}`, wallOps, scene);
                 w.position = new BABYLON.Vector3(pos.x, WALL_HEIGHT / 2, pos.z);
-            
-                const mat = new BABYLON.StandardMaterial(`wm${i}_${j}`, scene);
-                const tex = new BABYLON.Texture(wallUrl, scene);
-            
-                tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-                tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-            
-                mat.diffuseTexture = tex;
-                mat.specularColor = new BABYLON.Color3(0, 0, 0);
-                mat.diffuseTexture.level = 0.9;
-                mat.maxSimultaneousLights = 8;
-                w.material = mat;
+                w.material = wallShader;
             }
 
             // CEILING
