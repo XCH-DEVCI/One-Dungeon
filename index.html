@@ -400,8 +400,6 @@ function setMonsterStatus(mon, newStatus) {
     else if (name === "walk") mon.animSpeed = 6;
     else if (name === "run")  mon.animSpeed = 10;
     else if (name === "attack") mon.animSpeed = 8;
-
-    updateMonsterMesh(mon);
 }
     
 async function createMonster(scene, worldPos, type) {
@@ -1311,6 +1309,8 @@ function clearAllHeldButtons() {
     btnBackHeld = false;
     btnTurnLeftHeld = false;
     btnTurnRightHeld = false;
+    btnLookUpHeld = false;
+    btnLookDownHeld = false;
 }
     
 window.addEventListener("keydown", e => {
