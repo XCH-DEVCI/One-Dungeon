@@ -474,7 +474,13 @@ async function createMonster(scene, worldPos, type) {
             frame.parent = root;
         }
     }
-
+    
+    // Make sure first frame is visible BEFORE animation loop
+    const idleDef = statusDefs["idle"];
+    if (idleDef) {
+        idleDef.frameMeshes[0].setEnabled(true);
+    }
+    
     setMonsterStatus(monster, "idle");
     return monster;
 }
