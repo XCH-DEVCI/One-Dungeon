@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.7</title>
+<title>ONE Dungeon v1.0.8</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -400,6 +400,8 @@ function setMonsterStatus(mon, newStatus) {
     else if (name === "walk") mon.animSpeed = 6;
     else if (name === "run")  mon.animSpeed = 10;
     else if (name === "attack") mon.animSpeed = 8;
+
+    updateMonsterMesh(mon);
 }
     
 async function createMonster(scene, worldPos, type) {
