@@ -714,7 +714,7 @@ void main() {
     float brickH = 0.5;
 
     float row = floor(uv.y / brickH);
-    float offset = mod(row, 2.0) * (brickW * 0.5);
+    float offset = mod(row, 3.0) * (brickW * 0.5);
     uv.x += offset;
 
     float bx = fract(uv.x / brickW);
