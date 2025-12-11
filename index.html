@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.1</title>
+<title>ONE Dungeon v1.0.2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -705,116 +705,106 @@ precision highp float;
 varying vec2 vUV;
 uniform float time;
 
-// --------------------
-// Hash function
-// --------------------
-float hash(vec2 p){ 
-    return fract(sin(dot(p, vec2(23.1, 91.7))) * 43758.5453); 
+// ----------- Random Helpers -----------
+float hash(vec2 p){
+    return fract(sin(dot(p, vec2(23.1, 91.7))) * 43758.5453123);
 }
 
-// --------------------
-// 2D noise
-// --------------------
 float noise(vec2 p){
     vec2 i = floor(p);
     vec2 f = fract(p);
-
     float a = hash(i);
     float b = hash(i + vec2(1,0));
     float c = hash(i + vec2(0,1));
     float d = hash(i + vec2(1,1));
-
-    vec2 u = smoothstep(0., 1., f);
+    vec2 u = f*f*(3.0 - 2.0*f);
     return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
 }
 
-// --------------------
-// FBM
-// --------------------
 float fbm(vec2 p){
     float v = 0.0;
     float a = 0.5;
     for(int i=0;i<5;i++){
         v += a * noise(p);
-        p = p * 2.0 + 1.7;
+        p = p * 2.0 + 3.1;
         a *= 0.5;
     }
     return v;
 }
 
-// ------------------------------
-// Compute fake bump normal
-// by sampling height map
-// ------------------------------
-vec3 computeNormal(vec2 uv) {
-    float eps = 0.001;
+// ---------------------------------------------
+// NEW: Brick pattern function
+// ---------------------------------------------
+vec2 brickUV(vec2 uv, float brickW, float brickH) {
+    // offset every second row for staggered bricks
+    float row = floor(uv.y / brickH);
+    float offset = mod(row, 2.0) * (brickW * 0.5);
+    uv.x += offset;
 
-    float h = fbm(uv * 1.3);
-    float hx = fbm(uv * 1.3 + vec2(eps,0.0));
-    float hy = fbm(uv * 1.3 + vec2(0.0,eps));
-
-    float dx = hx - h;
-    float dy = hy - h;
-
-    // Convert height gradient → surface normal
-    vec3 N = normalize(vec3(-dx * 2.0, 1.0, -dy * 2.0));
-    return N;
+    return uv;
 }
 
 void main(){
-    vec2 uv = vUV;
+    vec2 uv = vUV * 1.0;
 
-    // -----------------------------------
-    // Base stone color from fbm
-    // -----------------------------------
-    float n = fbm(uv * 1.2);
-    vec3 baseColor = mix(
-        vec3(0.12, 0.12, 0.14),
-        vec3(0.22, 0.20, 0.25),
-        n
+    // ---------------------------------------
+    // BRICK GRID
+    // ---------------------------------------
+    float brickW = 1.0;   // width of each brick
+    float brickH = 0.5;   // height of each brick
+
+    vec2 buv = brickUV(uv, brickW, brickH);
+
+    // Which brick tile (integer cell)
+    vec2 brickID = floor(vec2(buv.x / brickW, buv.y / brickH));
+
+    // Local coordinate inside brick [0,1]
+    vec2 brickPos = vec2(
+        fract(buv.x / brickW),
+        fract(buv.y / brickH)
     );
 
-    // -----------------------------------
+    // ---------------------------------------
     // Mortar lines
-    // -----------------------------------
-    float brickY = step(0.95, fract(uv.y * 0.5));
-    float brickX = step(0.98, fract(uv.x * 1.0));
-    float mortar = max(brickX, brickY);
+    // ---------------------------------------
+    float mortar = 0.04;  // mortar thickness
+    float isMortar =
+        step(brickPos.x, mortar) +
+        step(1.0 - brickPos.x, mortar) +
+        step(brickPos.y, mortar) +
+        step(1.0 - brickPos.y, mortar);
 
-    baseColor = mix(baseColor, vec3(0.02), mortar);
+    // ---------------------------------------
+    // Brick color = noise perturbed
+    // ---------------------------------------
+    float stoneNoise = fbm(brickID * 0.7 + brickPos * 2.0);
+    vec3 brickColor = mix(
+        vec3(0.12, 0.12, 0.14),
+        vec3(0.22, 0.20, 0.25),
+        stoneNoise
+    );
 
-    // -----------------------------------
-    // Cracks
-    // -----------------------------------
-    float crack = smoothstep(0.0, 0.03, abs(noise(uv * 6.0) - 0.5));
-    baseColor -= crack * 0.25;
+    // Add cracks (subtle)
+    float crack = smoothstep(0.0, 0.02, abs(noise(brickPos * 12.0 + brickID) - 0.5));
+    brickColor -= crack * 0.15;
 
-    // -----------------------------------
-    // BUMP / NORMAL calculation
-    // -----------------------------------
-    vec3 normal = computeNormal(uv);
+    // ---------------------------------------
+    // Mortar color
+    // ---------------------------------------
+    vec3 mortarColor = vec3(0.03, 0.03, 0.04);
 
-    // -----------------------------------
-    // Fake directional light
-    // -----------------------------------
-    vec3 lightDir = normalize(vec3(0.6, 1.0, 0.5));
-    float diff = max(dot(normal, lightDir), 0.0);
+    // combine
+    vec3 color = mix(brickColor, mortarColor, clamp(isMortar, 0.0, 1.0));
 
-    // Soft AO (darken crevices)
-    float ao = pow(n, 1.4);
+    // ---------------------------------------
+    // Simple fake lighting
+    // ---------------------------------------
+    vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
+    float diff = max(dot(normalize(vec3(0,1,0)), lightDir), 0.2);
 
-    vec3 finalColor = baseColor;
-    finalColor *= (0.4 + diff * 0.8); // diffuse shading
-    finalColor *= mix(0.65, 1.0, ao); // ambient occlusion
+    color *= (0.8 + diff * 0.4);
 
-    // -----------------------------------
-    // Subtle specular highlights
-    // -----------------------------------
-    float spec = pow(max(dot(reflect(-lightDir, normal), vec3(0,1,0)), 0.0), 16.0);
-    finalColor += spec * 0.15;
-    finalColor = mix(finalColor, finalColor * 2.2, 0.5);
-
-    gl_FragColor = vec4(finalColor, 1.0);
+    gl_FragColor = vec4(color, 1.0);
 }
 `;
     
