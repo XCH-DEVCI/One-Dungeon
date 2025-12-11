@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.3</title>
+<title>ONE Dungeon v1.0.4</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -724,16 +724,16 @@ void main() {
     float by = fract(uv.y / brickH);
 
     // -----------------------------
-    // MORTAR (white)
+    // MORTAR
     // -----------------------------
-    float mortar = 0.08;  // thickness of mortar
+    float mortar = 0.04;  // thickness of mortar
     float isMortar =
         step(bx, mortar) +
         step(1.0 - bx, mortar) +
         step(by, mortar) +
         step(1.0 - by, mortar);
 
-    vec3 mortarColor = vec3(1.0);    // PURE WHITE
+    vec3 mortarColor = vec3(0);    // PURE BLACK
 
     // -----------------------------
     // Brick color (flat dark gray)
