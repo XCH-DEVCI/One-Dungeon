@@ -549,8 +549,6 @@ function spawnStructures(scene) {
 // ========================================================
 BABYLON.Effect.ShadersStore["noiseSkyboxVertexShader"] = `
     precision highp float;
-
-    uniform float time;
     
     attribute vec3 position;
     uniform mat4 worldViewProjection;
@@ -565,6 +563,8 @@ BABYLON.Effect.ShadersStore["noiseSkyboxVertexShader"] = `
 
 BABYLON.Effect.ShadersStore["noiseSkyboxFragmentShader"] = `
     precision highp float;
+
+    uniform float time;
 
     varying vec3 vPosition;
 
@@ -621,6 +621,7 @@ BABYLON.Effect.ShadersStore["noiseSkyboxFragmentShader"] = `
    Scene - JSON driven walls/floors/ceilings
    plus Babylon GUI for HP and controls
    ============================================================ */
+let skyMat = null;
 
 function createScene() {
     const scene = new BABYLON.Scene(engine);
@@ -632,7 +633,7 @@ function createScene() {
     const skybox = BABYLON.MeshBuilder.CreateBox("noiseSkybox", { size: 500 }, scene);
     skybox.infiniteDistance = true;
     
-    const skyMat = new BABYLON.ShaderMaterial("noiseSkyMat", scene, {
+    skyMat = new BABYLON.ShaderMaterial("noiseSkyMat", scene, {
         vertex: "noiseSkybox",
         fragment: "noiseSkybox",
     }, {
