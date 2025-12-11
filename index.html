@@ -713,7 +713,6 @@ void main() {
     float brickW = 1.0;
     float brickH = 0.5;
 
-    // Offset every other row
     float row = floor(uv.y / brickH);
     float offset = mod(row, 2.0) * (brickW * 0.5);
     uv.x += offset;
@@ -722,45 +721,43 @@ void main() {
     float by = fract(uv.y / brickH);
 
     // ========================================
-    // 1) HARD MORTAR (PURE BLACK)
+    // COLOR DEFINITIONS
     // ========================================
-    float mortarSize = 0.05;
+    vec3 HARD_MORTAR = vec3(0.0);      // pure black
+    vec3 SOFT_MORTAR = vec3(0.15);     // dark gray
+    vec3 BRICK       = vec3(0.55);     // LIGHTER gray interior
 
+    // ========================================
+    // HARD MORTAR BORDER (BLACK)
+    // ========================================
+    float border = 0.04;
     float hardBorder =
-        step(bx, mortarSize) +
-        step(1.0 - bx, mortarSize) +
-        step(by, mortarSize) +
-        step(1.0 - by, mortarSize);
-
-    vec3 HARD_MORTAR = vec3(0.0);  // black
+        step(bx, border) +
+        step(1.0 - bx, border) +
+        step(by, border) +
+        step(1.0 - by, border);
 
     // ========================================
-    // 2) CLEAN BRICK (NO TEXTURE)
+    // SOFT BEVEL (INNER SHADING)
+    // DARK -> LIGHT → toward center
     // ========================================
-    vec3 BRICK = vec3(0.35);  // medium gray brick
+    float distX = min(bx, 1.0 - bx);
+    float distY = min(by, 1.0 - by);
+    float inner = min(distX, distY);
+
+    float bevel = smoothstep(0.18, 0.0, inner);
+
+    vec3 brickWithBevel = mix(SOFT_MORTAR, BRICK, bevel);
 
     // ========================================
-    // 3) SOFT MORTAR SHADING (DARK GRAY)
+    // HARD BORDER OVERWRITES EVERYTHING
     // ========================================
-    vec3 SOFT_MORTAR = vec3(0.15); // dark gray shade
-
-    float shadeWidth = 0.22;  // thickness of bevel zone
-
-    float edgeX = min(bx, 1.0 - bx);
-    float edgeY = min(by, 1.0 - by);
-    float edge = min(edgeX, edgeY);
-
-    float softMask = smoothstep(shadeWidth, 0.0, edge);
-    vec3 brickShaded = mix(SOFT_MORTAR, BRICK, softMask);
-
-    // ========================================
-    // HARD MORTAR OVERWRITES EVERYTHING
-    // ========================================
-    vec3 finalColor = mix(brickShaded, HARD_MORTAR, clamp(hardBorder, 0.0, 1.0));
+    vec3 finalColor = mix(brickWithBevel, HARD_MORTAR, clamp(hardBorder, 0.0, 1.0));
 
     gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
+
 
 BABYLON.Effect.ShadersStore["procFloorVertexShader"] = `
 precision highp float;
