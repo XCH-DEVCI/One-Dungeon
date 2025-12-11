@@ -812,6 +812,7 @@ void main(){
     // -----------------------------------
     float spec = pow(max(dot(reflect(-lightDir, normal), vec3(0,1,0)), 0.0), 16.0);
     finalColor += spec * 0.15;
+    finalColor = mix(finalColor, finalColor * 2.2, 0.5);
 
     gl_FragColor = vec4(finalColor, 1.0);
 }
