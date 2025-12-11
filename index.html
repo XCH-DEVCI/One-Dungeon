@@ -567,87 +567,105 @@ precision highp float;
 uniform float time;
 varying vec3 vPosition;
 
-// -------------------------------
-// Hash + Noise
-// -------------------------------
+// ------------------------------
+// Hash
+// ------------------------------
 float hash(vec3 p){
-    p  = fract(p * 0.3183099 + .1);
+    p = fract(p * 0.3183099 + .1);
     p *= 17.0;
     return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
 }
 
+// ------------------------------
+// Simple Noise
+// ------------------------------
 float noise(vec3 p){
     vec3 i = floor(p);
     vec3 f = fract(p);
 
-    float n = dot(i, vec3(1., 57., 113.));
+    float n = dot(i, vec3(1.,57.,113.));
 
     return mix(
         mix(
-            mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
-            mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x),
+            mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
+            mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x),
         f.y),
         mix(
-            mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
-            mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x),
+            mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
+            mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x),
         f.y),
     f.z);
 }
 
-// -------------------------------
-// Fractal Brownian Motion (FBM)
-// -------------------------------
+// ------------------------------
+// FBM Noise
+// ------------------------------
 float fbm(vec3 p){
     float v = 0.0;
-    float a = 0.5;
+    float a = 0.55;
     for(int i = 0; i < 5; i++){
         v += a * noise(p);
-        p *= 2.5;
+        p = p * 2.3 + vec3(1.2, 2.8, 0.5);
         a *= 0.5;
     }
     return v;
 }
 
-// -------------------------------
-// Star field
-// -------------------------------
-float stars(vec3 p){
-    float s = noise(p * 40.0);
-    s = step(0.995, s); // only very bright points survive
-    return s;
-}
-
-void main(void) {
+void main() {
     vec3 dir = normalize(vPosition);
 
-    // swirl motion
-    float t = time * 0.2;
-    vec3 p = dir * 3.0;
-    p.xy += vec2(sin(t + dir.z * 2.0), cos(t + dir.x * 3.0)) * 0.2;
+    float t = time * 0.30;
 
-    // layered nebula
-    float n = fbm(p);
-    float n2 = fbm(p * 2.0 + vec3(5.0, 2.0, 1.0));
+    // ------------------------------
+    // BLACK HOLE CENTER VORTEX
+    // ------------------------------
+    float r = length(dir.xz);
+    float angle = atan(dir.z, dir.x);
 
-    float neb = n * 0.6 + n2 * 0.4;
+    // 旋轉加速（越靠近中心旋轉越快）
+    float spin = t * (2.0 + 4.0 / max(r, 0.05));
+    angle += spin;
 
-    // dark fantasy purple tones
-    vec3 deepSpace = vec3(0.01, 0.0, 0.02);
-    vec3 nebulaPurple = vec3(0.4, 0.0, 0.6);
-    vec3 magicGlow = vec3(0.8, 0.3, 1.0);
+    vec2 vortex = vec2(cos(angle), sin(angle)) * r;
 
-    vec3 color = mix(deepSpace, nebulaPurple, neb * 1.2);
-    color = mix(color, magicGlow, pow(neb, 4.0)); // bright cores
+    // ------------------------------
+    // Push vector into 3D space
+    // ------------------------------
+    vec3 p = vec3(vortex.x, dir.y, vortex.y);
 
-    // stars
-    float starVal = stars(dir + time * 0.01);
-    color += starVal * 1.5;
+    // 吸入中心（黑洞吸引）
+    p *= (1.0 + 0.8 * (1.0 - r));
 
-    // extra darken sky near horizon
-    float horizon = smoothstep(-1.0, 0.2, dir.y);
-    color *= horizon;
+    // 雲層 FBM
+    float n = fbm(p * 3.0 + vec3(0, t * 0.8, t * 0.5));
+    float n2 = fbm(p * 5.0 + vec3(t, 2.0, 1.0));
 
-    gl_FragColor = vec4(color, 1.0);
+    float neb = n * 0.5 + n2 * 0.5;
+
+    // ------------------------------
+    // Black Hole Darkness
+    // 中心越黑，中間形成"事件視界"
+    // ------------------------------
+    float blackHole = smoothstep(0.18, 0.0, r);
+
+    // ------------------------------
+    // COLOR
+    // ------------------------------
+    vec3 deep = vec3(0.01, 0.0, 0.02);    // outer dark space
+    vec3 purple = vec3(0.4, 0.0, 0.7);   // nebula swirl
+    vec3 glow = vec3(1.2, 0.4, 1.4);     // strong magical energy
+
+    vec3 col = mix(deep, purple, neb);
+    col = mix(col, glow, pow(neb, 4.0));
+
+    // black hole center darkness
+    col *= 1.0 - blackHole;
+
+    // 加強事件視界亮邊
+    float ring = smoothstep(0.22, 0.18, r) * 0.9;
+    col += glow * ring * 1.8;
+
+    gl_FragColor = vec4(col, 1.0);
 }
 `;
     
