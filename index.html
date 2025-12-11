@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.5</title>
+<title>ONE Dungeon v1.0.6</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -477,19 +477,22 @@ async function createMonster(scene, worldPos, type) {
 }
 
 
-function spawnMonsters(scene) {
+async function spawnMonsters(scene) {
     monsters.length = 0;
+
     for (let i = 0; i < MAP_SIZE; i++) {
         for (let j = 0; j < MAP_SIZE; j++) {
             const sym = objectMap[i][j];
             if (!ASSETS.monsters || !ASSETS.monsters[sym]) continue;
 
             const pos = gridToWorld(i, j);
-            const monster = createMonster(scene, pos, sym);
+            const monster = await createMonster(scene, pos, sym);  // <--- FIX
+
             if (monster) monsters.push(monster);
         }
     }
 }
+
 
 function spawnStructures(scene) {
     if (!structureMap || !structureMap.length) return;
@@ -889,6 +892,8 @@ function buildVoxels(voxels, scene, worldX, worldY, worldZ, scale = 0.15) {
     const base = BABYLON.MeshBuilder.CreateBox("voxelBase", { size: 1 }, scene);
     base.isVisible = false;
 
+    const meshes = [];
+
     const sizeX = voxels.length;
     const sizeY = voxels[0].length;
     const sizeZ = voxels[0][0].length;
@@ -908,12 +913,21 @@ function buildVoxels(voxels, scene, worldX, worldY, worldZ, scale = 0.15) {
                 inst.scaling.set(scale, scale, scale);
 
                 const mat = new BABYLON.StandardMaterial("vm", scene);
-                mat.diffuseColor = new BABYLON.Color3(v.color.r / 255, v.color.g / 255, v.color.b / 255);
+                mat.diffuseColor = new BABYLON.Color3(
+                    v.color.r / 255,
+                    v.color.g / 255,
+                    v.color.b / 255
+                );
                 inst.material = mat;
+
+                meshes.push(inst);
             }
         }
     }
+
+    return meshes;
 }
+
 
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
@@ -1473,7 +1487,7 @@ async function switchMap(portalCfg) {
 
     camera.rotation.y = preservedYaw;
     
-    spawnMonsters(scene);
+    await spawnMonsters(scene);
     spawnStructures(scene);
     
     placePlayerAfterMapLoad(portalCfg.spawn);
@@ -1571,7 +1585,7 @@ function update(dt) {
     await loadMaps(INITIAL_MAP_URL);
 
     scene = createScene();
-    spawnMonsters(scene);
+    await spawnMonsters(scene);
     spawnStructures(scene);
 
     placePlayerAfterMapLoad(null);
