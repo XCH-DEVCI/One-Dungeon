@@ -849,7 +849,7 @@ function pngToVoxels(img) {
 function applySpriteFrame(mesh, url, cols, rows, frameIndex) {
     const tex = new BABYLON.Texture(url, mesh.getScene());
     tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    tex.wrapY = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
     tex.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
 
     const fx = frameIndex % cols;
@@ -873,15 +873,13 @@ function createPaperSpriteMesh(scene, width, height, thickness = 0.05) {
         depth: thickness
     }, scene);
 
-    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y; // face camera horizontally only
+    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
-    mesh.material = new BABYLON.StandardMaterial("paperMat", scene);
-    mesh.material.diffuseTexture = null;
-    mesh.material.emissiveTexture = null;
-    mesh.material.opacityTexture = null;
-
-    mesh.material.disableLighting = false;
-    mesh.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    const mat = new BABYLON.StandardMaterial("paperMat", scene);
+    mat.useAlphaFromDiffuseTexture = true;   // <-- IMPORTANT
+    mat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    mat.backFaceCulling = false;             // <-- IMPORTANT
+    mesh.material = mat;
 
     return mesh;
 }
