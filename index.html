@@ -705,106 +705,47 @@ precision highp float;
 varying vec2 vUV;
 uniform float time;
 
-// ----------- Random Helpers -----------
-float hash(vec2 p){
-    return fract(sin(dot(p, vec2(23.1, 91.7))) * 43758.5453123);
-}
+void main() {
+    vec2 uv = vUV * 1.0;
 
-float noise(vec2 p){
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    float a = hash(i);
-    float b = hash(i + vec2(1,0));
-    float c = hash(i + vec2(0,1));
-    float d = hash(i + vec2(1,1));
-    vec2 u = f*f*(3.0 - 2.0*f);
-    return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
-}
+    // -----------------------------
+    // Brick dimensions
+    // -----------------------------
+    float brickW = 1.0; 
+    float brickH = 0.5;
 
-float fbm(vec2 p){
-    float v = 0.0;
-    float a = 0.5;
-    for(int i=0;i<5;i++){
-        v += a * noise(p);
-        p = p * 2.0 + 3.1;
-        a *= 0.5;
-    }
-    return v;
-}
-
-// ---------------------------------------------
-// NEW: Brick pattern function
-// ---------------------------------------------
-vec2 brickUV(vec2 uv, float brickW, float brickH) {
-    // offset every second row for staggered bricks
+    // Offset every second row (classic brick pattern)
     float row = floor(uv.y / brickH);
     float offset = mod(row, 2.0) * (brickW * 0.5);
     uv.x += offset;
 
-    return uv;
-}
+    // Local brick coordinate
+    float bx = fract(uv.x / brickW);
+    float by = fract(uv.y / brickH);
 
-void main(){
-    vec2 uv = vUV * 1.0;
-
-    // ---------------------------------------
-    // BRICK GRID
-    // ---------------------------------------
-    float brickW = 1.0;   // width of each brick
-    float brickH = 0.5;   // height of each brick
-
-    vec2 buv = brickUV(uv, brickW, brickH);
-
-    // Which brick tile (integer cell)
-    vec2 brickID = floor(vec2(buv.x / brickW, buv.y / brickH));
-
-    // Local coordinate inside brick [0,1]
-    vec2 brickPos = vec2(
-        fract(buv.x / brickW),
-        fract(buv.y / brickH)
-    );
-
-    // ---------------------------------------
-    // Mortar lines
-    // ---------------------------------------
-    float mortar = 0.04;  // mortar thickness
+    // -----------------------------
+    // MORTAR (white)
+    // -----------------------------
+    float mortar = 0.08;  // thickness of mortar
     float isMortar =
-        step(brickPos.x, mortar) +
-        step(1.0 - brickPos.x, mortar) +
-        step(brickPos.y, mortar) +
-        step(1.0 - brickPos.y, mortar);
+        step(bx, mortar) +
+        step(1.0 - bx, mortar) +
+        step(by, mortar) +
+        step(1.0 - by, mortar);
 
-    // ---------------------------------------
-    // Brick color = noise perturbed
-    // ---------------------------------------
-    float stoneNoise = fbm(brickID * 0.7 + brickPos * 2.0);
-    vec3 brickColor = mix(
-        vec3(0.12, 0.12, 0.14),
-        vec3(0.22, 0.20, 0.25),
-        stoneNoise
-    );
+    vec3 mortarColor = vec3(1.0);    // PURE WHITE
 
-    // Add cracks (subtle)
-    float crack = smoothstep(0.0, 0.02, abs(noise(brickPos * 12.0 + brickID) - 0.5));
-    brickColor -= crack * 0.15;
+    // -----------------------------
+    // Brick color (flat dark gray)
+    // -----------------------------
+    vec3 brickColor = vec3(0.20, 0.20, 0.22);
 
-    // ---------------------------------------
-    // Mortar color
-    // ---------------------------------------
-    vec3 mortarColor = vec3(0.22, 0.19, 0.21);
+    // -----------------------------
+    // Output
+    // -----------------------------
+    vec3 finalColor = mix(brickColor, mortarColor, clamp(isMortar, 0.0, 1.0));
 
-    // combine
-    vec3 color = mix(brickColor, mortarColor, clamp(isMortar, 0.0, 1.0));
-
-    // ---------------------------------------
-    // Simple fake lighting
-    // ---------------------------------------
-    vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
-    float diff = max(dot(normalize(vec3(0,1,0)), lightDir), 0.2);
-
-    color *= (0.8 + diff * 0.4);
-
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
     
