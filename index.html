@@ -1339,6 +1339,7 @@ function checkPortal() {
    ============================================================ */
 
 function update(dt) {
+    wallShader.setFloat("time", performance.now() * 0.0001);
     if (skyMat) {
         let t = performance.now() * 0.0001;
         skyMat.setFloat("time", t);
