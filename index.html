@@ -779,7 +779,7 @@ function createScene() {
         needAlphaTesting: false,
     });
 
-    const wallShader = new BABYLON.ShaderMaterial("wallShader", scene, {
+    wallShader = new BABYLON.ShaderMaterial("wallShader", scene, {
         vertex: "procWall",
         fragment: "procWall"
     }, {
