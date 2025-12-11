@@ -1064,19 +1064,6 @@ function createScene() {
                 w.material = wallShader;
             }
 
-            // CEILING
-            const ceilChar = ceilingMap[i][j];
-            const ceilUrl  = ceilingAssets?.[ceilChar];
-            if (ceilUrl) {
-                const c = BABYLON.MeshBuilder.CreateBox(`c${i}_${j}`, ceilOps, scene);
-                c.position = new BABYLON.Vector3(pos.x, CEILING_Y + CEILING_THICKNESS / 2, pos.z);
-            
-                const m = new BABYLON.StandardMaterial(`cm${i}_${j}`, scene);
-                m.diffuseTexture = new BABYLON.Texture(ceilUrl, scene);
-                m.maxSimultaneousLights = 8;
-                c.material = m;
-            }
-
             // LIGHTS from lightMap
             const lightChar = lightMap[i]?.[j];
             if (lightChar && lightChar !== ".") {
