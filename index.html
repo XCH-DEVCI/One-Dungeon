@@ -753,21 +753,13 @@ void main(){
     gl_FragColor = vec4(base, 1.0);
 }
 `;
-
-const wallShader = new BABYLON.ShaderMaterial("wallShader", scene, {
-    vertex: "procWall",
-    fragment: "procWall"
-}, {
-    attributes: ["position", "uv"],
-    uniforms: ["worldViewProjection", "time"]
-});
-
     
 /* ============================================================
    Scene - JSON driven walls/floors/ceilings
    plus Babylon GUI for HP and controls
    ============================================================ */
 let skyMat = null;
+let wallShader = null;
 
 function createScene() {
     const scene = new BABYLON.Scene(engine);
@@ -785,6 +777,14 @@ function createScene() {
     }, {
         needAlphaBlending: false,
         needAlphaTesting: false,
+    });
+
+    const wallShader = new BABYLON.ShaderMaterial("wallShader", scene, {
+        vertex: "procWall",
+        fragment: "procWall"
+    }, {
+        attributes: ["position", "uv"],
+        uniforms: ["worldViewProjection", "time"]
     });
     
     // No lighting & culling
@@ -1339,7 +1339,9 @@ function checkPortal() {
    ============================================================ */
 
 function update(dt) {
-    wallShader.setFloat("time", performance.now() * 0.0001);
+    if (wallShader) {
+        wallShader.setFloat("time", performance.now() * 0.0001);
+    }
     if (skyMat) {
         let t = performance.now() * 0.0001;
         skyMat.setFloat("time", t);
