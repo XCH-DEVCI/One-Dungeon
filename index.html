@@ -253,11 +253,11 @@ canvas.addEventListener("touchcancel", e => {
 }, { passive: false });
 
 let MAP_SIZE = 0;
-const TILE_SIZE = 2;
+const TILE_SIZE = 1;
 let HALF_MAP = 0;
 
 const FLOOR_THICKNESS = 0.2;
-const WALL_HEIGHT = 3;
+const WALL_HEIGHT = 1;
 const CEILING_THICKNESS = 0.2;
 const CEILING_Y = WALL_HEIGHT;
 
@@ -710,11 +710,11 @@ void main() {
     // ========================================
     // BRICK GEOMETRY
     // ========================================
-    float brickW = 1.5;
+    float brickW = 1.0;
     float brickH = 0.5;
 
     float row = floor(uv.y / brickH);
-    float offset = mod(row, 3.0) * (brickW * 0.5);
+    float offset = mod(row, 2.0) * (brickW * 0.5);
     uv.x += offset;
 
     float bx = fract(uv.x / brickW);
