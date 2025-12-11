@@ -700,6 +700,7 @@ void main(void){
 }
 `;
 
+BABYLON.Effect.ShadersStore["procWallFragmentShader"] = `
 precision highp float;
 varying vec2 vUV;
 
@@ -743,15 +744,13 @@ void main() {
     // ========================================
     vec3 SOFT_MORTAR = vec3(0.15); // dark gray shade
 
-    float shadeWidth = 0.22;  // thickness of soft bevel area
+    float shadeWidth = 0.22;  // thickness of bevel zone
 
     float edgeX = min(bx, 1.0 - bx);
     float edgeY = min(by, 1.0 - by);
     float edge = min(edgeX, edgeY);
 
-    // soft bevel fades from dark gray to brick gray
     float softMask = smoothstep(shadeWidth, 0.0, edge);
-
     vec3 brickShaded = mix(SOFT_MORTAR, BRICK, softMask);
 
     // ========================================
@@ -761,6 +760,7 @@ void main() {
 
     gl_FragColor = vec4(finalColor, 1.0);
 }
+`;
 
 BABYLON.Effect.ShadersStore["procFloorVertexShader"] = `
 precision highp float;
