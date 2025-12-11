@@ -567,18 +567,18 @@ precision highp float;
 uniform float time;
 varying vec3 vPosition;
 
-// ------------------------------
+// -----------------------------------
 // Hash
-// ------------------------------
+// -----------------------------------
 float hash(vec3 p){
-    p = fract(p * 0.3183099 + .1);
+    p = fract(p * 0.3183099 + 0.1);
     p *= 17.0;
     return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
 }
 
-// ------------------------------
-// Simple Noise
-// ------------------------------
+// -----------------------------------
+// Basic Noise
+// -----------------------------------
 float noise(vec3 p){
     vec3 i = floor(p);
     vec3 f = fract(p);
@@ -597,9 +597,9 @@ float noise(vec3 p){
     f.z);
 }
 
-// ------------------------------
-// FBM Noise
-// ------------------------------
+// -----------------------------------
+// FBM
+// -----------------------------------
 float fbm(vec3 p){
     float v = 0.0;
     float a = 0.55;
@@ -613,57 +613,72 @@ float fbm(vec3 p){
 
 void main() {
     vec3 dir = normalize(vPosition);
+    float t = time * 0.25;
 
-    float t = time * 0.30;
+    // ======================================================
+    // 1. BLACK HOLE POSITION (LEFT SIDE)
+    // ======================================================
+    // 黑洞在左邊天空：靠 dir.x 位置來計算距離
+    vec2 holePos = vec2(-0.65, 0.0); 
+    vec2 uv = dir.xz;
 
-    // ------------------------------
-    // BLACK HOLE CENTER VORTEX
-    // ------------------------------
-    float r = length(dir.xz);
-    float angle = atan(dir.z, dir.x);
+    float distHole = length(uv - holePos);
 
-    // 旋轉加速（越靠近中心旋轉越快）
-    float spin = t * (2.0 + 4.0 / max(r, 0.05));
+    // ======================================================
+    // 2. DIMENSION RIFT（次元裂縫）在中間偏上
+    // ======================================================
+    vec2 riftPos = vec2(0.05, 0.25);
+    float distRift = length(uv - riftPos);
+
+    // 裂縫震動（脈動收縮）
+    float pulse = 0.2 + 0.15 * sin(t * 4.0 + distRift * 12.0);
+
+    float riftMask = smoothstep(0.32 + pulse, 0.18, distRift);
+
+    // ======================================================
+    // 3. SKY SWIRL MOVEMENT
+    // ======================================================
+    float angle = atan(uv.y - holePos.y, uv.x - holePos.x);
+    float spin = t * (1.2 + 4.0 / max(distHole, 0.06));
+
     angle += spin;
+    vec2 vortex = vec2(cos(angle), sin(angle)) * distHole;
 
-    vec2 vortex = vec2(cos(angle), sin(angle)) * r;
-
-    // ------------------------------
-    // Push vector into 3D space
-    // ------------------------------
     vec3 p = vec3(vortex.x, dir.y, vortex.y);
 
-    // 吸入中心（黑洞吸引）
-    p *= (1.0 + 0.8 * (1.0 - r));
+    // 星雲被黑洞強吸
+    p *= (1.0 + 0.7 * (1.0 - distHole));
 
-    // 雲層 FBM
-    float n = fbm(p * 3.0 + vec3(0, t * 0.8, t * 0.5));
-    float n2 = fbm(p * 5.0 + vec3(t, 2.0, 1.0));
+    // ======================================================
+    // 4. NEBULA LAYERS
+    // ======================================================
+    float n1 = fbm(p * 3.0 + vec3(0, t*0.8, t*0.4));
+    float n2 = fbm(p * 6.0 + vec3(t*0.5, 2.0, 1.0));
+    float neb = n1 * 0.55 + n2 * 0.45;
 
-    float neb = n * 0.5 + n2 * 0.5;
-
-    // ------------------------------
-    // Black Hole Darkness
-    // 中心越黑，中間形成"事件視界"
-    // ------------------------------
-    float blackHole = smoothstep(0.18, 0.0, r);
-
-    // ------------------------------
-    // COLOR
-    // ------------------------------
-    vec3 deep = vec3(0.01, 0.0, 0.02);    // outer dark space
-    vec3 purple = vec3(0.4, 0.0, 0.7);   // nebula swirl
-    vec3 glow = vec3(1.2, 0.4, 1.4);     // strong magical energy
+    // ======================================================
+    // 5. COLORS
+    // ======================================================
+    vec3 deep = vec3(0.01, 0.0, 0.03);
+    vec3 purple = vec3(0.45, 0.0, 0.7);
+    vec3 blue = vec3(0.2, 0.3, 1.0);
+    vec3 riftGlow = vec3(1.5, 0.4, 2.0);
 
     vec3 col = mix(deep, purple, neb);
-    col = mix(col, glow, pow(neb, 4.0));
+    col = mix(col, blue, pow(neb, 2.5));
 
-    // black hole center darkness
+    // 次元裂縫強光
+    col += riftGlow * riftMask * 1.4;
+
+    // ======================================================
+    // 6. DARK BLACK HOLE (LEFT SIDE)
+    // ======================================================
+    float blackHole = smoothstep(0.23, 0.0, distHole);
     col *= 1.0 - blackHole;
 
-    // 加強事件視界亮邊
-    float ring = smoothstep(0.22, 0.18, r) * 0.9;
-    col += glow * ring * 1.8;
+    // 黑洞事件視界亮邊
+    float holeRing = smoothstep(0.32, 0.23, distHole);
+    col += vec3(1.2, 0.5, 1.5) * holeRing * 1.3;
 
     gl_FragColor = vec4(col, 1.0);
 }
