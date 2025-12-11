@@ -325,6 +325,46 @@ function placePlayerAfterMapLoad(entrySpawn) {
     }
 }
 
+async function getSpriteYCorrection(url, cols, rows, frameIndex) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            ctx.drawImage(img, 0, 0);
+
+            const wFrame = img.width / cols;
+            const hFrame = img.height / rows;
+
+            const fx = frameIndex % cols;
+            const fy = Math.floor(frameIndex / cols);
+
+            const x0 = fx * wFrame;
+            const y0 = fy * hFrame;
+
+            const data = ctx.getImageData(x0, y0, wFrame, hFrame).data;
+
+            let lowest = 0;
+            for (let y = hFrame - 1; y >= 0; y--) {
+                for (let x = 0; x < wFrame; x++) {
+                    const idx = (y * wFrame + x) * 4 + 3;  // alpha
+                    if (data[idx] > 10) {
+                        lowest = y;
+                        resolve(lowest / hFrame * 1.2);  // scale to mesh height
+                        return;
+                    }
+                }
+            }
+            resolve(0.6);
+        };
+        img.src = url;
+    });
+}
+
 /* ============================================================
    Monster System with status (idle, walk, run, attack)
    ============================================================ */
@@ -383,6 +423,10 @@ async function createMonster(scene, worldPos, type) {
 
             const paper = createPaperSpriteMesh(scene, 1.2, 1.2, 0.05);
             applySpriteFrame(paper, sConf.sprite, cols, rows, f);
+
+            const correction = await getSpriteYCorrection(sConf.sprite, cols, rows, f);
+            paper.position.y += correction;
+            
             paper.setEnabled(false);
             frameMeshes.push(paper);
 
