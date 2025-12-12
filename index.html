@@ -871,6 +871,33 @@ function createScene() {
             } else {
                 f.material = floorShader;  // fallback
             }
+
+            // WALLS
+            for (let i = 0; i < MAP_SIZE; i++) {
+                for (let j = 0; j < MAP_SIZE; j++) {
+            
+                    const sym = wallMap[i][j];
+                    if (sym === "." || !wallAssets[sym]) continue;
+            
+                    const pos = gridToWorld(i, j);
+            
+                    const wall = BABYLON.MeshBuilder.CreateBox(`w${i}_${j}`, {
+                        width: TILE_SIZE,
+                        depth: TILE_SIZE,
+                        height: WALL_HEIGHT
+                    }, scene);
+            
+                    wall.position = new BABYLON.Vector3(
+                        pos.x,
+                        WALL_HEIGHT / 2,
+                        pos.z
+                    );
+            
+                    // APPLY stoneWall shader
+                    wall.material = wallShader;
+                }
+            }
+
             
             // LIGHTS from lightMap
             const lightChar = lightMap[i]?.[j];
