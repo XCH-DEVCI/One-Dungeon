@@ -804,32 +804,37 @@ function createScene() {
     const voxelMap = mapData.map;
     const voxelDefs = mapData.walls;
     
-    function buildVoxelColumn(x, z, height, tex) {
+    function buildVoxelColumn(cellX, cellZ, height, tex) {
         const cubeSize = TILE_SIZE;
     
         let mat = null;
         if (tex) {
-            mat = new BABYLON.StandardMaterial("mat_" + x + "_" + z, scene);
+            mat = new BABYLON.StandardMaterial("mat_" + cellX + "_" + cellZ, scene);
             mat.diffuseTexture = new BABYLON.Texture(tex, scene);
-            mat.specularColor = new BABYLON.Color3(0,0,0);
+            mat.specularColor = new BABYLON.Color3(0, 0, 0);
         }
+    
+        // convert grid cell → world coordinate
+        const worldX = (cellX + 0.5) * TILE_SIZE;
+        const worldZ = (cellZ + 0.5) * TILE_SIZE;
     
         for (let y = 0; y < height; y++) {
             const cube = BABYLON.MeshBuilder.CreateBox(
-                `v_${x}_${y}_${z}`,
+                `v_${cellX}_${y}_${cellZ}`,
                 { size: cubeSize },
                 scene
             );
     
             cube.position = new BABYLON.Vector3(
-                (x - voxelMap[i].length / 2 + 0.5) * TILE_SIZE,
+                worldX,
                 y * TILE_SIZE + TILE_SIZE * 0.5,
-                (z - voxelMap.length / 2 + 0.5) * TILE_SIZE
+                worldZ
             );
     
             if (mat) cube.material = mat;
         }
     }
+
 
     // voxel collision table
     window.voxelSolid = Array.from({ length: voxelMap.length }, () =>
