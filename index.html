@@ -822,9 +822,9 @@ function createScene() {
             );
     
             cube.position = new BABYLON.Vector3(
-                x * cubeSize,
-                y * cubeSize + cubeSize * 0.5,
-                z * cubeSize
+                (x - voxelMap[i].length / 2 + 0.5) * TILE_SIZE,
+                y * TILE_SIZE + TILE_SIZE * 0.5,
+                (z - voxelMap.length / 2 + 0.5) * TILE_SIZE
             );
     
             if (mat) cube.material = mat;
