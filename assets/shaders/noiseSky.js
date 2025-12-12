@@ -1,15 +1,18 @@
+// ========================================================
+// Procedural Noise Skybox Shader
+// ========================================================
 BABYLON.Effect.ShadersStore["noiseSkyboxVertexShader"] = `
-precision highp float;
+    precision highp float;
+    
+    attribute vec3 position;
+    uniform mat4 worldViewProjection;
 
-attribute vec3 position;
-uniform mat4 worldViewProjection;
+    varying vec3 vPosition;
 
-varying vec3 vPosition;
-
-void main(void) {
-    vPosition = position;
-    gl_Position = worldViewProjection * vec4(position, 1.0);
-}
+    void main(void) {
+        vPosition = position;
+        gl_Position = worldViewProjection * vec4(position, 1.0);
+    }
 `;
 
 BABYLON.Effect.ShadersStore["noiseSkyboxFragmentShader"] = `
@@ -18,14 +21,18 @@ precision highp float;
 uniform float time;
 varying vec3 vPosition;
 
-// hash
+// -------------------------------
+// Hash
+// -------------------------------
 float hash(vec3 p){
     p = fract(p * 0.3183099 + 0.1);
     p *= 17.0;
     return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
 }
 
-// noise
+// -------------------------------
+// Noise
+// -------------------------------
 float noise(vec3 p){
     vec3 i = floor(p);
     vec3 f = fract(p);
@@ -42,6 +49,9 @@ float noise(vec3 p){
     f.z);
 }
 
+// -------------------------------
+// fBM
+// -------------------------------
 float fbm(vec3 p){
     float v = 0.0;
     float a = 0.5;
@@ -53,7 +63,9 @@ float fbm(vec3 p){
     return v;
 }
 
-// vortex
+// --------------------------------------------
+// Vortex noise – spiraling fractal galaxy
+// --------------------------------------------
 float vortex(vec2 uv, float spin){
     float angle = atan(uv.y, uv.x);
     float r = length(uv);
@@ -67,6 +79,9 @@ float vortex(vec2 uv, float spin){
     return n1*0.6 + n2*0.4;
 }
 
+// =======================================================
+// MULTIPLE RIFT POSITIONS
+// =======================================================
 vec2 riftPos[3];
 void initRifts() {
     riftPos[0] = vec2(-0.4, 0.25);
@@ -81,6 +96,9 @@ void main(){
     vec2 uv = dir.xz;
     float t = time * 0.3;
 
+    // --------------------------------------------------
+    // Background nebula
+    // --------------------------------------------------
     float neb = fbm(vec3(dir*3.0 + time*0.05));
 
     vec3 deep = vec3(0.01, 0.0, 0.03);
@@ -90,22 +108,32 @@ void main(){
     vec3 col = mix(deep, purple, neb);
     col = mix(col, blue, pow(neb, 2.5));
 
+    // --------------------------------------------------
+    // MULTI-RIFT RENDERING
+    // --------------------------------------------------
     for(int i=0; i<3; i++){
         float dist = length(uv - riftPos[i]);
+
+        // pulsation
         float pulse = 0.15 + 0.1 * sin(time*4.0 + float(i)*1.7);
         float riftMask = smoothstep(0.35 + pulse, 0.12, dist);
 
+        // INSIDE THE RIFT = NEW UNIVERSE
+        // galaxy-like vortex
         float spin = (i==0 ? 1.5 : (i==1 ? -2.2 : 0.8));
         float galaxy = vortex((uv - riftPos[i]) * 3.0, spin);
 
+        // color of alternate dimension
         vec3 universeColor = mix(
             vec3(0.05, 0.1, 0.25),
             vec3(0.8, 0.3, 1.7),
             pow(galaxy, 2.0)
         );
 
+        // blend into main sky
         col = mix(col, universeColor, riftMask);
 
+        // bright glowing edges
         float edge = smoothstep(0.18, 0.12, dist);
         col += vec3(1.2, 0.4, 2.0) * edge * 0.7;
     }
