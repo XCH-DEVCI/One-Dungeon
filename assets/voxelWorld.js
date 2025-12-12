@@ -1,9 +1,9 @@
-// =======================================
-// Voxel World Builder
-// (C) ONE Dungeon — Clean voxel rewrite
-// =======================================
+// ====================================================================
+//  voxelWorld.js   ←  NO EXPORTS!
+//  Attached to window so Babylon can call it normally
+// ====================================================================
 
-export function buildVoxelWorld(scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, wallShader) {
+window.buildVoxelWorld = function (scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, wallShader) {
     
     const invisibleMat = new BABYLON.StandardMaterial("invis", scene);
     invisibleMat.alpha = 0;
@@ -11,7 +11,7 @@ export function buildVoxelWorld(scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, w
     const rows = voxelMap.length;
     const cols = voxelMap[0].length;
 
-    // collision table
+    // build collision table
     window.voxelSolid = Array.from({ length: rows }, () =>
         Array(cols).fill(false)
     );
@@ -23,6 +23,7 @@ export function buildVoxelWorld(scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, w
             if (!cell || !cell.height || cell.height <= 0) continue;
 
             const H = cell.height;
+
             const x = (j - cols / 2 + 0.5) * TILE_SIZE;
             const z = (i - rows / 2 + 0.5) * TILE_SIZE;
 
@@ -42,7 +43,7 @@ export function buildVoxelWorld(scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, w
                     z
                 );
 
-                // top-most layer uses wallShader
+                // top layer = stoneWall shader
                 if (y === H - 1) {
                     cube.material = wallShader;
                 } else {
@@ -51,4 +52,4 @@ export function buildVoxelWorld(scene, voxelMap, TILE_SIZE, BASE_WORLD_OFFSET, w
             }
         }
     }
-}
+};
