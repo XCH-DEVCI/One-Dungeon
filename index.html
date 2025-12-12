@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>ONE Dungeon v1.0.8</title>
+<title>ONE Dungeon v1.0.9</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
@@ -258,6 +258,7 @@ let HALF_MAP = 0;
 
 const FLOOR_THICKNESS = 0.2;
 const WALL_HEIGHT = 2;
+const CEILING_Y = WALL_HEIGHT;
 
 const CAMERA_HEIGHT = 1.4;
 const PLAYER_RADIUS = 0.75;
@@ -1017,7 +1018,14 @@ function createScene() {
             const floorUrl  = floorAssets?.[floorChar];
             const f = BABYLON.MeshBuilder.CreateBox(`f${i}_${j}`, floorOps, scene);
             f.position = new BABYLON.Vector3(pos.x, -FLOOR_THICKNESS / 2, pos.z);
-            f.material = floorShader;
+            if (floorUrl) {
+                const m = new BABYLON.StandardMaterial(`fm${i}_${j}`, scene);
+                m.diffuseTexture = new BABYLON.Texture(floorUrl, scene);
+                m.maxSimultaneousLights = 8;
+                f.material = m;
+            } else {
+                f.material = floorShader;  // fallback
+            }
 
             // WALL
             const tile = wallMap[i][j];
