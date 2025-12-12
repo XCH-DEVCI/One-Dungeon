@@ -849,13 +849,14 @@ function createScene() {
             const def = voxelDefs[symbol];
     
             if (!def || def.height === 0) continue;
-
-            window.voxelSolid[i][j] = true; // ← 紀錄碰撞格子
     
-            const worldX = j - voxelMap[i].length / 2;
-            const worldZ = i - voxelMap.length / 2;
+            window.voxelSolid[i][j] = true;
     
-            buildVoxelColumn(worldX, worldZ, def.height, def.tex);
+            // NOTE: i = row, j = col → convert to world grid cell
+            const cellX = j - voxelMap[i].length / 2;
+            const cellZ = i - voxelMap.length / 2;
+    
+            buildVoxelColumn(cellX, cellZ, def.height, def.tex);
         }
     }
 
