@@ -830,6 +830,11 @@ function createScene() {
             if (mat) cube.material = mat;
         }
     }
+
+    // voxel collision table
+    window.voxelSolid = Array.from({ length: voxelMap.length }, () =>
+        Array(voxelMap[0].length).fill(false)
+    );
     
     // Build voxel walls ONCE
     for (let i = 0; i < voxelMap.length; i++) {
@@ -839,6 +844,8 @@ function createScene() {
             const def = voxelDefs[symbol];
     
             if (!def || def.height === 0) continue;
+
+            window.voxelSolid[i][j] = true; // ← 紀錄碰撞格子
     
             const worldX = j - voxelMap[i].length / 2;
             const worldZ = i - voxelMap.length / 2;
@@ -1024,17 +1031,13 @@ const MOVE_SPEED = 4;
 const TURN_SPEED = Math.PI;
 
 function isObstacleTile(i, j) {
-    const wallTile = wallMap[i]?.[j];
-    if (wallAssets && wallTile && (wallTile in wallAssets)) {
-        return true;
-    }
+    // voxel collision first
+    if (window.voxelSolid?.[i]?.[j]) return true;
 
+    // structures (models)
     const sChar = structureMap[i]?.[j];
-    if (sChar && sChar !== "." && structuresDefs && structuresDefs[sChar]) {
-        const sConf = structuresDefs[sChar];
-        if (sConf.solid !== false) {
-            return true;
-        }
+    if (sChar && sChar !== "." && structuresDefs[sChar]?.solid !== false) {
+        return true;
     }
 
     return false;
