@@ -38,6 +38,7 @@
 <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
 <script src="https://xch-devci.github.io/One-Dungeon/assets/shaders/noiseSky.js"></script>
+<script src="https://xch-devci.github.io/One-Dungeon/assets/shaders/stoneWall.js"></script>
 </head>
 
 <body>
@@ -543,77 +544,6 @@ function spawnStructures(scene) {
 
     console.log("spawnStructures finished");
 }
-
-BABYLON.Effect.ShadersStore["procWallVertexShader"] = `
-precision highp float;
-attribute vec3 position;
-attribute vec2 uv;
-uniform mat4 worldViewProjection;
-varying vec2 vUV;
-void main(void){
-    vUV = uv * 5.0;   // 放大 UV 讓磚較小
-    gl_Position = worldViewProjection * vec4(position,1.0);
-}
-`;
-
-BABYLON.Effect.ShadersStore["procWallFragmentShader"] = `
-precision highp float;
-varying vec2 vUV;
-
-void main() {
-    vec2 uv = vUV;
-
-    // ========================================
-    // BRICK GEOMETRY
-    // ========================================
-    float brickW = 1.0;
-    float brickH = 0.5;
-
-    float row = floor(uv.y / brickH);
-    float offset = mod(row, 2.0) * (brickW * 0.5);
-    uv.x += offset;
-
-    float bx = fract(uv.x / brickW);
-    float by = fract(uv.y / brickH);
-
-    // ========================================
-    // COLOR DEFINITIONS
-    // ========================================
-    vec3 HARD_MORTAR = vec3(0.0);      // pure black
-    vec3 SOFT_MORTAR = vec3(0.10);     // dark gray
-    vec3 BRICK       = vec3(0.05);     // LIGHTER gray interior
-
-    // ========================================
-    // HARD MORTAR BORDER (BLACK)
-    // ========================================
-    float border = 0.03;
-    float hardBorder =
-        step(bx, border) +
-        step(1.0 - bx, border) +
-        step(by, border) +
-        step(1.0 - by, border);
-
-    // ========================================
-    // SOFT BEVEL (INNER SHADING)
-    // DARK -> LIGHT → toward center
-    // ========================================
-    float distX = min(bx, 1.0 - bx);
-    float distY = min(by, 1.0 - by);
-    float inner = min(distX, distY);
-
-    float bevel = smoothstep(0.18, 0.0, inner);
-
-    vec3 brickWithBevel = mix(SOFT_MORTAR, BRICK, bevel);
-
-    // ========================================
-    // HARD BORDER OVERWRITES EVERYTHING
-    // ========================================
-    vec3 finalColor = mix(brickWithBevel, HARD_MORTAR, clamp(hardBorder, 0.0, 1.0));
-
-    gl_FragColor = vec4(finalColor, 1.0);
-}
-`;
-
 
 BABYLON.Effect.ShadersStore["procFloorVertexShader"] = `
 precision highp float;
